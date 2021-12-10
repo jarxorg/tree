@@ -1,0 +1,149 @@
+package tree
+
+import (
+	"bytes"
+	"encoding/json"
+	"fmt"
+)
+
+func MarshalJSON(n Node) ([]byte, error) {
+	return json.Marshal(n)
+}
+
+func UnmarshalJSON(b []byte) (Node, error) {
+	dec := json.NewDecoder(bytes.NewReader(b))
+	t, err := dec.Token()
+	if err != nil {
+		return nil, err
+	}
+	d, ok := t.(json.Delim)
+	if !ok {
+		return nil, fmt.Errorf("Unknown token %#v", t)
+	}
+	switch ds := d.String(); ds {
+	case "{":
+		m := Map{}
+		if err := jsonMap(dec, m); err != nil {
+			return nil, err
+		}
+		return m, nil
+	case "[":
+		return jsonArray(dec, Array{})
+	}
+	return nil, fmt.Errorf("Unknown token %#v", t)
+}
+
+func (n Map) UnmarshalJSON(b []byte) error {
+	dec := json.NewDecoder(bytes.NewReader(b))
+	t, err := dec.Token()
+	if err != nil {
+		return err
+	}
+	d, ok := t.(json.Delim)
+	if !ok || d.String() != "{" {
+		return fmt.Errorf("Unknown token %#v", t)
+	}
+	return jsonMap(dec, n)
+}
+
+func (n *Array) UnmarshalJSON(b []byte) error {
+	dec := json.NewDecoder(bytes.NewReader(b))
+	t, err := dec.Token()
+	if err != nil {
+		return err
+	}
+	d, ok := t.(json.Delim)
+	if !ok || d.String() != "[" {
+		return fmt.Errorf("Unknown token %#v", t)
+	}
+	*n, err = jsonArray(dec, *n)
+	return err
+}
+
+func jsonMap(dec *json.Decoder, m Map) error {
+	t, err := dec.Token()
+	if err != nil {
+		return err
+	}
+	if d, ok := t.(json.Delim); ok {
+		if d.String() == "}" {
+			return nil
+		}
+		return fmt.Errorf("Unknown token %#v", t)
+	}
+
+	key, ok := t.(string)
+	if !ok {
+		return fmt.Errorf("Unknown token %#v", t)
+	}
+
+	t, err = dec.Token()
+	if err != nil {
+		return err
+	}
+	if d, ok := t.(json.Delim); ok {
+		switch ds := d.String(); ds {
+		case "{":
+			mm := Map{}
+			if err := jsonMap(dec, mm); err != nil {
+				return err
+			}
+			m[key] = mm
+			return jsonMap(dec, m)
+		case "[":
+			aa, err := jsonArray(dec, Array{})
+			if err != nil {
+				return err
+			}
+			m[key] = aa
+			return jsonMap(dec, m)
+		}
+	}
+
+	m[key] = jsonValue(t)
+	return jsonMap(dec, m)
+}
+
+func jsonArray(dec *json.Decoder, a Array) (Array, error) {
+	t, err := dec.Token()
+	if err != nil {
+		return nil, err
+	}
+	if d, ok := t.(json.Delim); ok {
+		switch ds := d.String(); ds {
+		case "]":
+			return a, nil
+		case "{":
+			mm := Map{}
+			if err := jsonMap(dec, mm); err != nil {
+				return nil, err
+			}
+			return jsonArray(dec, append(a, mm))
+		case "[":
+			aa, err := jsonArray(dec, Array{})
+			if err != nil {
+				return nil, err
+			}
+			return jsonArray(dec, append(a, aa))
+		}
+	}
+	return jsonArray(dec, append(a, jsonValue(t)))
+}
+
+func jsonValue(t json.Token) Node {
+	if t == nil {
+		return nil
+	}
+	switch t.(type) {
+	case string:
+		return StringValue(t.(string))
+	case bool:
+		return BoolValue(t.(bool))
+	case float64:
+		return Float64Value(t.(float64))
+	case json.Number:
+		n, _ := t.(json.Number).Int64()
+		return Int64Value(n)
+	}
+	return StringValue(fmt.Sprintf("%v", t))
+}

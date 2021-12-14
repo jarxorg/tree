@@ -6,12 +6,14 @@ import (
 	"fmt"
 )
 
+// MarshalJSON returns the JSON encoding of the specified node.
 func MarshalJSON(n Node) ([]byte, error) {
 	return json.Marshal(n)
 }
 
-func UnmarshalJSON(b []byte) (Node, error) {
-	dec := json.NewDecoder(bytes.NewReader(b))
+// UnmarshalJSON parses the JSON-encoded data to a Node.
+func UnmarshalJSON(data []byte) (Node, error) {
+	dec := json.NewDecoder(bytes.NewReader(data))
 	t, err := dec.Token()
 	if err != nil {
 		return nil, err
@@ -33,8 +35,9 @@ func UnmarshalJSON(b []byte) (Node, error) {
 	return nil, fmt.Errorf("Unknown token %#v", t)
 }
 
-func (n Map) UnmarshalJSON(b []byte) error {
-	dec := json.NewDecoder(bytes.NewReader(b))
+// UnmarshalJSON is an implementation of json.Unmarshaler.
+func (n Map) UnmarshalJSON(data []byte) error {
+	dec := json.NewDecoder(bytes.NewReader(data))
 	t, err := dec.Token()
 	if err != nil {
 		return err
@@ -46,8 +49,9 @@ func (n Map) UnmarshalJSON(b []byte) error {
 	return jsonMap(dec, n)
 }
 
-func (n *Array) UnmarshalJSON(b []byte) error {
-	dec := json.NewDecoder(bytes.NewReader(b))
+// UnmarshalJSON is an implementation of json.Unmarshaler.
+func (n *Array) UnmarshalJSON(data []byte) error {
+	dec := json.NewDecoder(bytes.NewReader(data))
 	t, err := dec.Token()
 	if err != nil {
 		return err
@@ -140,10 +144,7 @@ func jsonValue(t json.Token) Node {
 	case bool:
 		return BoolValue(t.(bool))
 	case float64:
-		return Float64Value(t.(float64))
-	case json.Number:
-		n, _ := t.(json.Number).Int64()
-		return Int64Value(n)
+		return NumberValue(t.(float64))
 	}
-	return StringValue(fmt.Sprintf("%v", t))
+	return StringValue(fmt.Sprintf("%#v", t))
 }

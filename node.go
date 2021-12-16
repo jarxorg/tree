@@ -13,6 +13,36 @@ const (
 	TypeNumberValue
 )
 
+// IsArray returns t == TypeArray.
+func (t Type) IsArray() bool {
+	return t == TypeArray
+}
+
+// IsMap returns t == TypeMap.
+func (t Type) IsMap() bool {
+	return t == TypeMap
+}
+
+// IsValue returns true if t is TypeStringValue or TypeBoolValue or TypeNumberValue.
+func (t Type) IsValue() bool {
+	return t&TypeValue != 0
+}
+
+// IsStringValue returns t == TypeStringValue.
+func (t Type) IsStringValue() bool {
+	return t == TypeStringValue
+}
+
+// IsBoolValue returns t == TypeBoolValue.
+func (t Type) IsBoolValue() bool {
+	return t == TypeBoolValue
+}
+
+// IsNumberValue returns t == TypeNumberValue.
+func (t Type) IsNumberValue() bool {
+	return t == TypeNumberValue
+}
+
 // A Node is an element on the tree.
 type Node interface {
 	// Type returns this node type.

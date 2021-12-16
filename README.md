@@ -4,7 +4,7 @@
 [![Report Card](https://goreportcard.com/badge/github.com/jarxorg/tree)](https://goreportcard.com/report/github.com/jarxorg/tree)
 
 Tree is simple tree structure on go.
-The node can marshal/unmarshal json and yaml.
+The node can marshal/unmarshal json and yaml that is instead of interface{}.
 
 ## Examples
 

@@ -116,7 +116,7 @@ func Test_Map_UnmarshalJSON(t *testing.T) {
 		"c": nil,
 	}
 	data := []byte(`{"a":1,"b":true,"c":null}`)
-	got := Map{}
+	var got Map
 	if err := json.Unmarshal(data, &got); err != nil {
 		log.Fatal(err)
 	}

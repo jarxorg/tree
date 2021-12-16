@@ -25,7 +25,7 @@ func UnmarshalJSON(data []byte) (Node, error) {
 	switch ds := d.String(); ds {
 	case "{":
 		m := Map{}
-		if err := jsonMap(dec, m); err != nil {
+		if err := jsonMap(dec, &m); err != nil {
 			return nil, err
 		}
 		return m, nil
@@ -36,7 +36,7 @@ func UnmarshalJSON(data []byte) (Node, error) {
 }
 
 // UnmarshalJSON is an implementation of json.Unmarshaler.
-func (n Map) UnmarshalJSON(data []byte) error {
+func (n *Map) UnmarshalJSON(data []byte) error {
 	dec := json.NewDecoder(bytes.NewReader(data))
 	t, err := dec.Token()
 	if err != nil {
@@ -45,6 +45,9 @@ func (n Map) UnmarshalJSON(data []byte) error {
 	d, ok := t.(json.Delim)
 	if !ok || d.String() != "{" {
 		return fmt.Errorf("Unknown token %#v", t)
+	}
+	if *n == nil {
+		*n = make(Map)
 	}
 	return jsonMap(dec, n)
 }
@@ -64,7 +67,7 @@ func (n *Array) UnmarshalJSON(data []byte) error {
 	return err
 }
 
-func jsonMap(dec *json.Decoder, m Map) error {
+func jsonMap(dec *json.Decoder, m *Map) error {
 	t, err := dec.Token()
 	if err != nil {
 		return err
@@ -89,22 +92,22 @@ func jsonMap(dec *json.Decoder, m Map) error {
 		switch ds := d.String(); ds {
 		case "{":
 			mm := Map{}
-			if err := jsonMap(dec, mm); err != nil {
+			if err := jsonMap(dec, &mm); err != nil {
 				return err
 			}
-			m[key] = mm
+			(*m)[key] = mm
 			return jsonMap(dec, m)
 		case "[":
 			aa, err := jsonArray(dec, Array{})
 			if err != nil {
 				return err
 			}
-			m[key] = aa
+			(*m)[key] = aa
 			return jsonMap(dec, m)
 		}
 	}
 
-	m[key] = jsonValue(t)
+	(*m)[key] = jsonValue(t)
 	return jsonMap(dec, m)
 }
 
@@ -119,7 +122,7 @@ func jsonArray(dec *json.Decoder, a Array) (Array, error) {
 			return a, nil
 		case "{":
 			mm := Map{}
-			if err := jsonMap(dec, mm); err != nil {
+			if err := jsonMap(dec, &mm); err != nil {
 				return nil, err
 			}
 			return jsonArray(dec, append(a, mm))

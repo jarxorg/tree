@@ -1,6 +1,9 @@
 package tree
 
-import "testing"
+import (
+	"reflect"
+	"testing"
+)
 
 func TestToValue(t *testing.T) {
 	tests := []struct {
@@ -49,6 +52,33 @@ func TestToValue(t *testing.T) {
 		got := ToValue(test.v)
 		if got != test.want {
 			t.Errorf(`Error ToValue(%#v) returns %#v; want %#v`, test.v, got, test.want)
+		}
+	}
+}
+
+func TestToNode(t *testing.T) {
+	tests := []struct {
+		v    interface{}
+		want Node
+	}{
+		{
+			v:    nil,
+			want: nil,
+		}, {
+			v:    StringValue("a"),
+			want: StringValue("a"),
+		}, {
+			v:    map[string]interface{}{"a": 1, "b": true},
+			want: Map{"a": NumberValue(1), "b": BoolValue(true)},
+		}, {
+			v:    []interface{}{"a", true, 1},
+			want: Array{StringValue("a"), BoolValue(true), NumberValue(1)},
+		},
+	}
+	for _, test := range tests {
+		got := ToNode(test.v)
+		if !reflect.DeepEqual(got, test.want) {
+			t.Errorf(`Error %v ToNode %v; want %v`, test.v, got, test.want)
 		}
 	}
 }

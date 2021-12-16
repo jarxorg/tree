@@ -6,6 +6,7 @@ import (
 	"log"
 
 	"github.com/jarxorg/tree"
+	"gopkg.in/yaml.v2"
 )
 
 func ExampleMarshalJSON() {
@@ -46,24 +47,24 @@ func ExampleMarshalJSON_combined() {
 }
 
 func ExampleUnmarshalJSON() {
-	var jsonBlob = []byte(`[
+	data := []byte(`[
   {"Name": "Platypus", "Order": "Monotremata"},
   {"Name": "Quoll",    "Order": "Dasyuromorphia"}
 ]`)
 
 	var animals tree.Array
-	err := json.Unmarshal(jsonBlob, &animals)
+	err := json.Unmarshal(data, &animals)
 	if err != nil {
 		log.Fatal(err)
 	}
-	fmt.Printf("%+v", animals)
+	fmt.Printf("%+v\n", animals)
 
 	// Output:
 	// [map[Name:Platypus Order:Monotremata] map[Name:Quoll Order:Dasyuromorphia]]
 }
 
 func ExampleUnmarshalJSON_combined() {
-	var jsonBlob = []byte(`[
+	data := []byte(`[
   {"Name": "Platypus", "Order": "Monotremata"},
   {"Name": "Quoll",    "Order": "Dasyuromorphia"}
 ]`)
@@ -72,12 +73,55 @@ func ExampleUnmarshalJSON_combined() {
 		Order tree.StringValue
 	}
 	var animals []Animal
-	err := json.Unmarshal(jsonBlob, &animals)
+	err := json.Unmarshal(data, &animals)
 	if err != nil {
 		log.Fatal(err)
 	}
-	fmt.Printf("%+v", animals)
+	fmt.Printf("%+v\n", animals)
 
 	// Output:
 	// [{Name:Platypus Order:Monotremata} {Name:Quoll Order:Dasyuromorphia}]
+}
+
+func ExampleMarshalYAML() {
+	group := tree.Map{
+		"ID":     tree.ToValue(1),
+		"Name":   tree.ToValue("Reds"),
+		"Colors": tree.ToArray("Crimson", "Red", "Ruby", "Maroon"),
+	}
+	b, err := yaml.Marshal(group)
+	if err != nil {
+		log.Fatal(err)
+	}
+	fmt.Println(string(b))
+
+	// Output:
+	// Colors:
+	// - Crimson
+	// - Red
+	// - Ruby
+	// - Maroon
+	// ID: 1
+	// Name: Reds
+}
+
+func ExampleUnmarshalYAML() {
+	data := []byte(`---
+Colors:
+- Crimson
+- Red
+- Ruby
+- Maroon
+ID: 1
+Name: Reds
+`)
+
+	var group tree.Map
+	if err := yaml.Unmarshal(data, &group); err != nil {
+		log.Fatal(err)
+	}
+	fmt.Printf("%+v\n", group)
+
+	// Output:
+	// map[Colors:[Crimson Red Ruby Maroon] ID:1 Name:Reds]
 }

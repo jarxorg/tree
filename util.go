@@ -44,3 +44,36 @@ func ToArray(v ...interface{}) Array {
 	}
 	return a
 }
+
+// ToNode converts the specified v to an Node.
+func ToNode(v interface{}) Node {
+	if v == nil {
+		return nil
+	}
+	switch v.(type) {
+	case Node:
+		return v.(Node)
+	case []interface{}:
+		a := v.([]interface{})
+		aa := Array{}
+		for _, vv := range a {
+			aa = append(aa, ToNode(vv))
+		}
+		return aa
+	case map[string]interface{}:
+		m := v.(map[string]interface{})
+		mm := Map{}
+		for k := range m {
+			mm[k] = ToNode(m[k])
+		}
+		return mm
+	case map[interface{}]interface{}:
+		m := v.(map[interface{}]interface{})
+		mm := Map{}
+		for k := range m {
+			mm[fmt.Sprintf("%v", k)] = ToNode(m[k])
+		}
+		return mm
+	}
+	return ToValue(v)
+}

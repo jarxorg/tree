@@ -1,12 +1,45 @@
-# github.com/jarxorg/tree
+# Tree structure for the Go language
 
 [![PkgGoDev](https://pkg.go.dev/badge/github.com/jarxorg/tree)](https://pkg.go.dev/github.com/jarxorg/tree)
 [![Report Card](https://goreportcard.com/badge/github.com/jarxorg/tree)](https://goreportcard.com/report/github.com/jarxorg/tree)
 
-Tree is simple tree structure on go.
-The node can marshal/unmarshal json and yaml that is instead of interface{}.
+The tree nodes can marshal/unmarshal JSON and YAML that is instead of `interface{}`.
 
 ## Examples
+
+### Go
+
+```go
+tree.Map{
+	"ID":     tree.ToValue(1),
+	"Name":   tree.ToValue("Reds"),
+	"Colors": tree.ToArray("Crimson", "Red", "Ruby", "Maroon"),
+}
+```
+
+### JSON
+
+```json
+{
+	"ID": 1,
+	"Name": "Reds",
+	"Colors": ["Crimson", "Red", "Ruby", "Maroon"]
+}
+```
+
+### YAML
+
+```yaml
+ID: 1
+Name: Reds
+Colors:
+- Crimson
+- Red
+- Ruby
+- Maroon
+```
+
+### Marshal and Unmarshal
 
 ```go
 package main

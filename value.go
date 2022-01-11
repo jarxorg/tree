@@ -28,7 +28,7 @@ func (n StringValue) Array() Array {
 	return nil
 }
 
-// Map returns nil
+// Map returns nil.
 func (n StringValue) Map() Map {
 	return nil
 }
@@ -36,6 +36,11 @@ func (n StringValue) Map() Map {
 // Value returns this.
 func (n StringValue) Value() Value {
 	return n
+}
+
+// Get returns nil.
+func (n StringValue) Get(key interface{}) Node {
+	return nil
 }
 
 // Bool returns false.
@@ -88,6 +93,11 @@ func (n BoolValue) Value() Value {
 	return n
 }
 
+// Get returns nil.
+func (n BoolValue) Get(key interface{}) Node {
+	return nil
+}
+
 // Bool returns this.
 func (n BoolValue) Bool() bool {
 	return bool(n)
@@ -136,6 +146,11 @@ func (n NumberValue) Map() Map {
 // Value returns this.
 func (n NumberValue) Value() Value {
 	return n
+}
+
+// Get returns nil.
+func (n NumberValue) Get(key interface{}) Node {
+	return nil
 }
 
 // Bool returns false.

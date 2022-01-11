@@ -53,6 +53,9 @@ type Node interface {
 	Map() Map
 	// Value returns this node as a Value.
 	Value() Value
+	// Get returns array/map value that matched by the specified key.
+	// The key type allows int or string.
+	Get(key interface{}) Node
 }
 
 // Array represents an array of Node.
@@ -70,13 +73,22 @@ func (n Array) Array() Array {
 	return n
 }
 
-// Map returns nil
+// Map returns nil.
 func (n Array) Map() Map {
 	return nil
 }
 
-// Value returns nil
+// Value returns nil.
 func (n Array) Value() Value {
+	return nil
+}
+
+// Get returns an array value as Node.
+func (n Array) Get(key interface{}) Node {
+	switch key.(type) {
+	case int:
+		return n[key.(int)]
+	}
 	return nil
 }
 
@@ -102,5 +114,14 @@ func (n Map) Map() Map {
 
 // Value returns nil.
 func (n Map) Value() Value {
+	return nil
+}
+
+// Get returns an array value as Node.
+func (n Map) Get(key interface{}) Node {
+	switch key.(type) {
+	case string:
+		return n[key.(string)]
+	}
 	return nil
 }

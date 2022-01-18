@@ -3,9 +3,9 @@
 [![PkgGoDev](https://pkg.go.dev/badge/github.com/jarxorg/tree)](https://pkg.go.dev/github.com/jarxorg/tree)
 [![Report Card](https://goreportcard.com/badge/github.com/jarxorg/tree)](https://goreportcard.com/report/github.com/jarxorg/tree)
 
-The tree nodes can marshal/unmarshal JSON and YAML that is instead of `interface{}`.
+Tree is a simple structure for dealing with dynamic or unknown JSON/YAML structures in Go.
 
-## Examples
+## Formats
 
 ### Go
 
@@ -13,7 +13,7 @@ The tree nodes can marshal/unmarshal JSON and YAML that is instead of `interface
 tree.Map{
 	"ID":     tree.ToValue(1),
 	"Name":   tree.ToValue("Reds"),
-	"Colors": tree.ToArray("Crimson", "Red", "Ruby", "Maroon"),
+	"Colors": tree.ToArrayValues("Crimson", "Red", "Ruby", "Maroon"),
 }
 ```
 
@@ -39,7 +39,7 @@ Colors:
 - Maroon
 ```
 
-### Marshal and Unmarshal
+## Marshal and Unmarshal
 
 ```go
 package main
@@ -57,7 +57,7 @@ func main() {
 	group := tree.Map{
 		"ID":     tree.ToValue(1),
 		"Name":   tree.ToValue("Reds"),
-		"Colors": tree.ToArray("Crimson", "Red", "Ruby", "Maroon"),
+		"Colors": tree.ToArrayValues("Crimson", "Red", "Ruby", "Maroon"),
 	}
 	j, err := json.Marshal(group)
 	if err != nil {

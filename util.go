@@ -36,11 +36,11 @@ func ToValue(v interface{}) Node {
 	return StringValue(fmt.Sprintf("%#v", v))
 }
 
-// ToArray converts the specified v to an Array.
-func ToArray(v ...interface{}) Array {
+// ToArrayValues calss ToValues for each provided vs and returns them as an Array.
+func ToArrayValues(vs ...interface{}) Array {
 	var a Array
-	for _, vv := range v {
-		a = append(a, ToValue(vv))
+	for _, v := range vs {
+		a = append(a, ToValue(v))
 	}
 	return a
 }

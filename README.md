@@ -95,3 +95,53 @@ func main() {
 	// tree.Map{"Colors":tree.Array{"Crimson", "Red", "Ruby", "Maroon"}, "ID":1, "Name":"Reds"}
 }
 ```
+
+## Query
+
+| Tree Query | Results |
+| - | - |
+| .store.book[0] | {"category": "reference", "author": "Nigel Rees", "title": "Sayings of the Century", "price": 8.95} |
+| .store.book[0].price | 8.95 |
+| .store.book[].author | ["Nigel Rees", "Evelyn Waugh", "Herman Melville", "J. R. R. Tolkien"] |
+| .store.book[.category=="fiction"].title | ["Sword of Honour", "Moby Dick", "The Lord of the Rings"] |
+| .store.book[.category=="fiction" and .price < 10].title | ["Moby Dick"] |
+
+### Illustrative Object
+
+```json
+{
+  "store": {
+    "book": [{
+        "category": "reference",
+        "author": "Nigel Rees",
+        "title": "Sayings of the Century",
+        "price": 8.95
+      },
+      {
+        "category": "fiction",
+        "author": "Evelyn Waugh",
+        "title": "Sword of Honour",
+        "price": 12.99
+      },
+      {
+        "category": "fiction",
+        "author": "Herman Melville",
+        "title": "Moby Dick",
+        "isbn": "0-553-21311-3",
+        "price": 8.99
+      },
+      {
+        "category": "fiction",
+        "author": "J. R. R. Tolkien",
+        "title": "The Lord of the Rings",
+        "isbn": "0-395-19395-8",
+        "price": 22.99
+      }
+    ],
+    "bicycle": {
+      "color": "red",
+      "price": 19.95
+    }
+  }
+}
+```

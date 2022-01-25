@@ -38,7 +38,7 @@ func ToValue(v interface{}) Node {
 
 // ToArrayValues calss ToValues for each provided vs and returns them as an Array.
 func ToArrayValues(vs ...interface{}) Array {
-	var a Array
+	a := Array{}
 	for _, v := range vs {
 		a = append(a, ToValue(v))
 	}
@@ -76,4 +76,35 @@ func ToNode(v interface{}) Node {
 		return mm
 	}
 	return ToValue(v)
+}
+
+// Walk walks provided node tree.
+func Walk(n Node, cb func(n Node, k interface{}, parent Node) bool) {
+	walk(n, cb)
+}
+
+func walk(n Node, cb func(n Node, k interface{}, parent Node) bool) bool {
+	if a := n.Array(); a != nil {
+		for i, v := range a {
+			if !cb(v, i, a) {
+				return false
+			}
+			if !walk(v, cb) {
+				return false
+			}
+		}
+		return true
+	}
+	if m := n.Map(); m != nil {
+		for k, v := range m {
+			if !cb(v, k, m) {
+				return false
+			}
+			if !walk(v, cb) {
+				return false
+			}
+		}
+		return true
+	}
+	return cb(n, nil, nil)
 }

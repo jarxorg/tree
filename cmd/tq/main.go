@@ -40,12 +40,13 @@ func (f *format) Set(value string) error {
 }
 
 var (
+	isHelp       = false
 	inputFormat  = format("json")
 	outputFormat = format("json")
 )
 
 func init() {
-	flag.Bool("h", false, "help for "+cmd)
+	flag.BoolVar(&isHelp, "h", false, "help for "+cmd)
 	flag.Var(&inputFormat, "i", `input format (json or yaml) (default "json")`)
 	flag.Var(&outputFormat, "o", `output format (json or yaml) (default "json")`)
 
@@ -59,6 +60,10 @@ func init() {
 
 func main() {
 	flag.Parse()
+	if isHelp {
+		flag.Usage()
+		return
+	}
 	handleError(run())
 }
 

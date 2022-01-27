@@ -2,11 +2,8 @@ package tree
 
 import (
 	"fmt"
-	"io"
-	"os"
 	"regexp"
 	"strconv"
-	"strings"
 )
 
 // Query is an interface that defines the methods to query a node.
@@ -16,25 +13,25 @@ type Query interface {
 
 type nopQuery struct{}
 
+// Exec returns the provided node.
 func (q nopQuery) Exec(n Node) (Node, error) {
 	return n, nil
 }
 
-// NopQuery with a no-op Exec method wrapping the provided interface.
+// NopQuery is a query that implements no-op Exec method.
 var NopQuery Query = nopQuery{}
 
-type valueQuery struct {
-	v interface{}
+// ValueQuery is a query that returns the constant value.
+type ValueQuery struct {
+	Node
 }
 
-func (q valueQuery) Exec(n Node) (Node, error) {
-	return ToValue(q.v), nil
+// Exec returns the constant value.
+func (q ValueQuery) Exec(n Node) (Node, error) {
+	return q.Node, nil
 }
 
-func ValueQuery(v interface{}) Query {
-	return valueQuery{v: v}
-}
-
+// MapQuery is a key of the Map that implements methods of the Query.
 type MapQuery string
 
 func (q MapQuery) Exec(n Node) (Node, error) {
@@ -59,6 +56,7 @@ func (q MapQuery) Exec(n Node) (Node, error) {
 	return nil, fmt.Errorf(`Cannot index array with string "%s"`, key)
 }
 
+// ArrayQuery is an index of the Array that implements methods of the Query.
 type ArrayQuery int
 
 func (q ArrayQuery) Exec(n Node) (Node, error) {
@@ -72,6 +70,7 @@ func (q ArrayQuery) Exec(n Node) (Node, error) {
 	return nil, fmt.Errorf(`Cannot index array with index %d`, index)
 }
 
+// ArrayRangeQuery represents a range of the Array that implements methods of the Query.
 type ArrayRangeQuery []int
 
 func (q ArrayRangeQuery) Exec(n Node) (Node, error) {
@@ -87,20 +86,7 @@ func (q ArrayRangeQuery) Exec(n Node) (Node, error) {
 	return nil, fmt.Errorf(`Cannot index array with range %d:%d`, q[0], q[1])
 }
 
-type CollectionQuery []Query
-
-func (qs CollectionQuery) Exec(n Node) (Node, error) {
-	c := Array{}
-	for _, q := range qs {
-		nn, err := q.Exec(n)
-		if err != nil {
-			return nil, err
-		}
-		c = append(c, nn)
-	}
-	return c, nil
-}
-
+// FilterQuery consists of multiple queries that filter the nodes in order.
 type FilterQuery []Query
 
 func (qs FilterQuery) Exec(n Node) (Node, error) {
@@ -115,10 +101,12 @@ func (qs FilterQuery) Exec(n Node) (Node, error) {
 	return nn, nil
 }
 
+// Selector checks if a node is eligible for selection.
 type Selector interface {
 	Matches(n Node) (bool, error)
 }
 
+// SelectQuery returns nodes that matched by selectors.
 type SelectQuery struct {
 	Selectors []Selector
 	Or        bool
@@ -145,6 +133,9 @@ func (q SelectQuery) Eval(n Node) (bool, error) {
 }
 
 func (q SelectQuery) Exec(n Node) (Node, error) {
+	if n == nil {
+		return nil, nil
+	}
 	if a := n.Array(); a != nil {
 		c := Array{}
 		for _, nn := range a {
@@ -161,14 +152,16 @@ func (q SelectQuery) Exec(n Node) (Node, error) {
 	return nil, nil
 }
 
+// Comparator represents a comparable selector.
 type Comparator struct {
-	Operator Operator
-	Left     Query
-	Right    Query
+	Left  Query
+	Op    Operator
+	Right Query
 }
 
 var _ Selector = (*Comparator)(nil)
 
+// Matches evaluates left and right using the operator. (eg. .id == 0)
 func (c Comparator) Matches(n Node) (bool, error) {
 	l, err := c.Left.Exec(n)
 	if err != nil {
@@ -181,19 +174,18 @@ func (c Comparator) Matches(n Node) (bool, error) {
 	if l == nil || r == nil {
 		return (l == nil && r == nil), nil
 	}
-	return l.Value().Compare(c.Operator, r.Value()), nil
+	return l.Value().Compare(c.Op, r.Value()), nil
 }
 
-var tokenRegexp = regexp.MustCompile(`"([^"]*)"|(and|==|<=|>=|[\.\|\(\)\[\]<>:])|(\w+)`)
+var tokenRegexp = regexp.MustCompile(`"([^"]*)"|(and|==|<=|>=|[\.\[\]<>:])|(\w+)`)
 
+// ParseQuery parses the provided expr to a Query.
+// See https://github.com/jarxorg/tree#Query
 func ParseQuery(expr string) (Query, error) {
 	token, err := tokenizeQuery(expr)
 	if err != nil {
 		return nil, err
 	}
-	fmt.Println("---")
-	printToken(os.Stdout, token, 0)
-	fmt.Println("---")
 	return tokenToQuery(token, expr)
 }
 
@@ -208,9 +200,6 @@ func tokenizeQuery(expr string) (*token, error) {
 	current := &token{}
 	ms := tokenRegexp.FindAllStringSubmatch(expr, -1)
 	for _, m := range ms {
-		if current == nil {
-			return nil, fmt.Errorf(`Syntax error: too right brackets: "%s"`, expr)
-		}
 		if m[1] != "" || m[3] != "" {
 			word := m[1]
 			if word == "" {
@@ -232,15 +221,10 @@ func tokenizeQuery(expr string) (*token, error) {
 		switch m[2] {
 		case "]":
 			if current.cmd != "[" {
-				return nil, fmt.Errorf(`Syntax error: no right brackets: "%s"`, expr)
+				return nil, fmt.Errorf(`Syntax error: no left bracket '[': "%s"`, expr)
 			}
 			current = current.parent
-		case ")":
-			if current.cmd != "(" {
-				return nil, fmt.Errorf(`Syntax error: no right brackets: "%s"`, expr)
-			}
-			current = current.parent
-		case "[", "(":
+		case "[":
 			current.children = append(current.children, t)
 			current = t
 		default:
@@ -253,25 +237,13 @@ func tokenizeQuery(expr string) (*token, error) {
 	return current, nil
 }
 
-// printToken prints token tree for debug.
-func printToken(w io.Writer, t *token, depth int) {
-	indent := strings.Repeat("\t", depth)
-	fmt.Fprintf(w, "%s{%s} %s\n", indent, t.cmd, t.word)
-	if len(t.children) > 0 {
-		depth++
-		for _, c := range t.children {
-			printToken(w, c, depth)
-		}
-	}
-}
-
 func tokenToQuery(t *token, expr string) (Query, error) {
 	child := len(t.children)
 
 	switch t.cmd {
 	case "":
 		if child == 0 {
-			return ValueQuery(t.word), nil
+			return ValueQuery{ToValue(t.word)}, nil
 		}
 	case ".":
 		if t.word != "" {
@@ -279,9 +251,8 @@ func tokenToQuery(t *token, expr string) (Query, error) {
 		}
 		return NopQuery, nil
 	case "[":
-		child := len(t.children)
 		if child == 0 {
-			return CollectionQuery{NopQuery}, nil
+			return SelectQuery{}, nil
 		}
 		if child == 1 {
 			i, err := strconv.Atoi(t.children[0].word)
@@ -293,11 +264,11 @@ func tokenToQuery(t *token, expr string) (Query, error) {
 		if child == 3 && t.children[1].cmd == ":" {
 			from, err := strconv.Atoi(t.children[0].word)
 			if err != nil {
-				return nil, fmt.Errorf(`Syntax error: invalid index: "%s"`, expr)
+				return nil, fmt.Errorf(`Syntax error: invalid range: "%s"`, expr)
 			}
 			to, err := strconv.Atoi(t.children[2].word)
 			if err != nil {
-				return nil, fmt.Errorf(`Syntax error: invalid index: "%s"`, expr)
+				return nil, fmt.Errorf(`Syntax error: invalid range: "%s"`, expr)
 			}
 			return ArrayRangeQuery{from, to}, nil
 		}
@@ -308,7 +279,7 @@ func tokenToQuery(t *token, expr string) (Query, error) {
 		return SelectQuery{Selectors: selectors}, nil
 	}
 	if child == 0 {
-		return nil, fmt.Errorf(`Syntax error: "%s": %#v`, expr, t)
+		return nil, fmt.Errorf(`Syntax error: invalid token %s: "%s"`, t.cmd, expr)
 	}
 	if child == 1 {
 		return tokenToQuery(t.children[0], expr)
@@ -355,12 +326,17 @@ func tokensToSelectors(ts []*token, expr string) ([]Selector, error) {
 			if err != nil {
 				return nil, err
 			}
-			selectors = append(selectors, Comparator{
-				Operator: Operator(group[op].cmd),
-				Left:     left,
-				Right:    right,
-			})
+			selectors = append(selectors, Comparator{left, Operator(group[op].cmd), right})
 		}
 	}
 	return selectors, nil
+}
+
+// Find finds a node from n using the Query.
+func Find(n Node, expr string) (Node, error) {
+	q, err := ParseQuery(expr)
+	if err != nil {
+		return nil, err
+	}
+	return q.Exec(n)
 }

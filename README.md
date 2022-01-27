@@ -1,4 +1,4 @@
-# Tree structure for the Go language
+# Tree
 
 [![PkgGoDev](https://pkg.go.dev/badge/github.com/jarxorg/tree)](https://pkg.go.dev/github.com/jarxorg/tree)
 [![Report Card](https://goreportcard.com/badge/github.com/jarxorg/tree)](https://goreportcard.com/report/github.com/jarxorg/tree)
@@ -102,9 +102,10 @@ func main() {
 | - | - |
 | .store.book[0] | {"category": "reference", "author": "Nigel Rees", "title": "Sayings of the Century", "price": 8.95} |
 | .store.book[0].price | 8.95 |
+| .store.book[1:2].price | [12.99, 8.99] |
 | .store.book[].author | ["Nigel Rees", "Evelyn Waugh", "Herman Melville", "J. R. R. Tolkien"] |
-| .store.book[.category=="fiction"].title | ["Sword of Honour", "Moby Dick", "The Lord of the Rings"] |
 | .store.book[.category=="fiction" and .price < 10].title | ["Moby Dick"] |
+| .store.book[.authors[0] == "Nigel Rees"].title | ["Sayings of the Century"] |
 
 ### Illustrative Object
 
@@ -144,4 +145,32 @@ func main() {
     }
   }
 }
+```
+
+## tq - Command line tool
+
+### Install
+
+```sh
+go install github.com/jarxorg/tree/cmd/tq@latest
+```
+
+### Usage
+
+```
+tq is a portable command-line JSON/YAML processor.
+
+Usage:
+  tq [flags] [query]
+
+Flags:
+  -h	help for tq
+  -i value
+    	input format (json or yaml) (default "json") (default json)
+  -o value
+    	output format (json or yaml) (default "json") (default json)
+
+Examples:
+  % echo '{"colors": ["red", "green", "blue"]}' | tq '.colors[0]'
+  "red"
 ```

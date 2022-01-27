@@ -81,11 +81,11 @@ func runJSON() error {
 	i := 0
 	dec := json.NewDecoder(os.Stdin)
 	for dec.More() {
-		var v interface{}
-		if err := dec.Decode(&v); err != nil {
+		n, err := tree.DecodeJSON(dec)
+		if err != nil {
 			return err
 		}
-		if err := evaluate(tree.ToNode(v), i); err != nil {
+		if err := evaluate(n, i); err != nil {
 			return err
 		}
 		i++
@@ -97,14 +97,14 @@ func runYAML() error {
 	i := 0
 	dec := yaml.NewDecoder(os.Stdin)
 	for {
-		var v interface{}
-		if err := dec.Decode(&v); err != nil {
+		n, err := tree.DecodeYAML(dec)
+		if err != nil {
 			if err == io.EOF {
 				break
 			}
 			return err
 		}
-		if err := evaluate(tree.ToNode(v), i); err != nil {
+		if err := evaluate(n, i); err != nil {
 			return err
 		}
 		i++

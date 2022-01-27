@@ -11,9 +11,8 @@ func MarshalJSON(n Node) ([]byte, error) {
 	return json.Marshal(n)
 }
 
-// UnmarshalJSON parses the JSON-encoded data to a Node.
-func UnmarshalJSON(data []byte) (Node, error) {
-	dec := json.NewDecoder(bytes.NewReader(data))
+// DecodeJSON decodes JSON as a node using the provided decoder.
+func DecodeJSON(dec *json.Decoder) (Node, error) {
 	t, err := dec.Token()
 	if err != nil {
 		return nil, err
@@ -33,6 +32,12 @@ func UnmarshalJSON(data []byte) (Node, error) {
 		return jsonArray(dec, Array{})
 	}
 	return nil, fmt.Errorf("Unknown token %#v", t)
+}
+
+// UnmarshalJSON parses the JSON-encoded data to a Node.
+func UnmarshalJSON(data []byte) (Node, error) {
+	dec := json.NewDecoder(bytes.NewReader(data))
+	return DecodeJSON(dec)
 }
 
 // UnmarshalJSON is an implementation of json.Unmarshaler.

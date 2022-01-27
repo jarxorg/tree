@@ -1,6 +1,7 @@
 package tree
 
 import (
+	"bytes"
 	"encoding/json"
 	"log"
 	"reflect"
@@ -57,6 +58,40 @@ func Test_Array_MarshalJSON(t *testing.T) {
 	}
 	if string(got) != want {
 		t.Errorf(`Error %#v marshaled %s; want %s`, n, string(got), want)
+	}
+}
+
+func Test_DecodeJSON_Errors(t *testing.T) {
+	tests := []struct {
+		data   []byte
+		errstr string
+	}{
+		{
+			data:   []byte(`0`),
+			errstr: "Unknown token 0",
+		}, {
+			data:   []byte(`"`),
+			errstr: "unexpected EOF",
+		}, {
+			data:   []byte(`}`),
+			errstr: "invalid character '}' looking for beginning of value",
+		}, {
+			data:   []byte("{\n1"),
+			errstr: `invalid character '1'`,
+		},
+	}
+	for i, test := range tests {
+		dec := json.NewDecoder(bytes.NewReader(test.data))
+		got, err := DecodeJSON(dec)
+		if got != nil {
+			t.Errorf(`Error tests[%d] returns not nil %#v`, i, got)
+		}
+		if err == nil {
+			t.Fatalf(`Error tests[%d] returns no error`, i)
+		}
+		if err.Error() != test.errstr {
+			t.Errorf(`Error tests[%d] returns error %s; want %s`, i, err.Error(), test.errstr)
+		}
 	}
 }
 

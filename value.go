@@ -4,13 +4,31 @@ import (
 	"strconv"
 )
 
+// Operator represents an operator.
+type Operator string
+
+var (
+	// EQ is `==`.
+	EQ Operator = "=="
+	// GT is `>`.
+	GT Operator = ">"
+	// GE is `>=`.
+	GE Operator = ">="
+	// LT is `<`.
+	LT Operator = "<"
+	// LE is `<=`.
+	LE Operator = "<="
+)
+
 // Value provides the accessor of primitive value.
 type Value interface {
+	Type() Type
 	String() string
 	Bool() bool
 	Int() int
 	Int64() int64
 	Float64() float64
+	Compare(op Operator, v Value) bool
 }
 
 // A StringValue represents a string value.
@@ -68,6 +86,28 @@ func (n StringValue) String() string {
 	return string(n)
 }
 
+// Compare compares n and v.
+func (n StringValue) Compare(op Operator, v Value) bool {
+	if v == nil || !v.Type().IsStringValue() {
+		return false
+	}
+	sn := n.String()
+	sv := v.String()
+	switch op {
+	case EQ:
+		return sn == sv
+	case GT:
+		return sn > sv
+	case GE:
+		return sn >= sv
+	case LT:
+		return sn < sv
+	case LE:
+		return sn <= sv
+	}
+	return false
+}
+
 // A BoolValue represents a bool value.
 type BoolValue bool
 
@@ -123,6 +163,18 @@ func (n BoolValue) String() string {
 	return strconv.FormatBool(bool(n))
 }
 
+// Compare compares n and v.
+func (n BoolValue) Compare(op Operator, v Value) bool {
+	if v == nil || !v.Type().IsBoolValue() {
+		return false
+	}
+	switch op {
+	case EQ:
+		return n.Bool() == v.Bool()
+	}
+	return false
+}
+
 // A NumberValue represents an number value.
 type NumberValue float64
 
@@ -176,4 +228,33 @@ func (n NumberValue) Float64() float64 {
 // String returns this as string using strconv.FormatFloat(float64(n), 'f', -1, 64).
 func (n NumberValue) String() string {
 	return strconv.FormatFloat(float64(n), 'f', -1, 64)
+}
+
+// Compare compares n and v.
+func (n NumberValue) Compare(op Operator, v Value) bool {
+	if v == nil || v.Type().IsBoolValue() {
+		return false
+	}
+	nv := v.Float64()
+	if v.Type().IsStringValue() {
+		var err error
+		nv, err = strconv.ParseFloat(v.String(), 64)
+		if err != nil {
+			return false
+		}
+	}
+	nn := n.Float64()
+	switch op {
+	case EQ:
+		return nn == nv
+	case GT:
+		return nn > nv
+	case GE:
+		return nn >= nv
+	case LT:
+		return nn < nv
+	case LE:
+		return nn <= nv
+	}
+	return false
 }

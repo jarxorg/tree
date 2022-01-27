@@ -1,7 +1,9 @@
 package tree
 
 import (
+	"errors"
 	"fmt"
+	"sort"
 )
 
 // ToValue converts the specified v to a Value as Node.
@@ -36,11 +38,11 @@ func ToValue(v interface{}) Node {
 	return StringValue(fmt.Sprintf("%#v", v))
 }
 
-// ToArray converts the specified v to an Array.
-func ToArray(v ...interface{}) Array {
-	var a Array
-	for _, vv := range v {
-		a = append(a, ToValue(vv))
+// ToArrayValues calss ToValues for each provided vs and returns them as an Array.
+func ToArrayValues(vs ...interface{}) Array {
+	a := Array{}
+	for _, v := range vs {
+		a = append(a, ToValue(v))
 	}
 	return a
 }
@@ -76,4 +78,59 @@ func ToNode(v interface{}) Node {
 		return mm
 	}
 	return ToValue(v)
+}
+
+// SkipWalk is used as a return value from WalkFunc to indicate that
+// the node and that children in the call is to be skipped.
+// It is not returned as an error by any function.
+var SkipWalk = errors.New("skip")
+
+// WalkFunc is the type of the function called by Walk to visit each nodes.
+//
+// The keys argument contains that parent keys and the node key that
+// type is int (array index) or string (map key).
+type WalkFunc func(n Node, keys []interface{}) error
+
+// Walk walks the node tree rooted at root, calling fn for each node or
+// that children in the tree, including root.
+func Walk(n Node, fn WalkFunc) error {
+	return walk(n, []interface{}{}, fn)
+}
+
+func walk(n Node, lastKeys []interface{}, fn WalkFunc) error {
+	if err := fn(n, lastKeys); err != nil {
+		if err == SkipWalk {
+			return nil
+		}
+		return err
+	}
+
+	last := len(lastKeys)
+	keys := make([]interface{}, last+1)
+	copy(keys, lastKeys)
+
+	if a := n.Array(); a != nil {
+		for i, v := range a {
+			keys[last] = i
+			if err := walk(v, keys, fn); err != nil {
+				return err
+			}
+		}
+		return nil
+	}
+	if m := n.Map(); m != nil {
+		var sorted []string
+		for k := range m {
+			sorted = append(sorted, k)
+		}
+		sort.Strings(sorted)
+		for _, k := range sorted {
+			keys[last] = k
+			if err := walk(m[k], keys, fn); err != nil {
+				return err
+			}
+		}
+		return nil
+	}
+	return nil
 }

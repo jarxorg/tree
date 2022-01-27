@@ -9,6 +9,15 @@ func MarshalYAML(n Node) ([]byte, error) {
 	return yaml.Marshal(n)
 }
 
+// DecodeYAML decodes YAML as a node using the provided decoder.
+func DecodeYAML(dec *yaml.Decoder) (Node, error) {
+	var v interface{}
+	if err := dec.Decode(&v); err != nil {
+		return nil, err
+	}
+	return ToNode(v), nil
+}
+
 // UnmarshalYAML returns the YAML encoding of the specified node.
 func UnmarshalYAML(data []byte) (Node, error) {
 	var v interface{}

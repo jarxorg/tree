@@ -13,7 +13,7 @@ func ExampleMarshalJSON() {
 	group := tree.Map{
 		"ID":     tree.ToValue(1),
 		"Name":   tree.ToValue("Reds"),
-		"Colors": tree.ToArray("Crimson", "Red", "Ruby", "Maroon"),
+		"Colors": tree.ToArrayValues("Crimson", "Red", "Ruby", "Maroon"),
 	}
 	b, err := json.Marshal(group)
 	if err != nil {
@@ -34,7 +34,7 @@ func ExampleMarshalJSON_combined() {
 	group := ColorGroup{
 		ID:     1,
 		Name:   "Reds",
-		Colors: tree.ToArray("Crimson", "Red", "Ruby", "Maroon"),
+		Colors: tree.ToArrayValues("Crimson", "Red", "Ruby", "Maroon"),
 	}
 	b, err := json.Marshal(group)
 	if err != nil {
@@ -87,7 +87,7 @@ func ExampleMarshalYAML() {
 	group := tree.Map{
 		"ID":     tree.ToValue(1),
 		"Name":   tree.ToValue("Reds"),
-		"Colors": tree.ToArray("Crimson", "Red", "Ruby", "Maroon"),
+		"Colors": tree.ToArrayValues("Crimson", "Red", "Ruby", "Maroon"),
 	}
 	b, err := yaml.Marshal(group)
 	if err != nil {

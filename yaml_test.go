@@ -1,6 +1,7 @@
 package tree
 
 import (
+	"bytes"
 	"log"
 	"reflect"
 	"testing"
@@ -70,6 +71,37 @@ func Test_Array_MarshalYAML(t *testing.T) {
 	}
 	if string(got) != want {
 		t.Errorf(`Error %#v marshaled %s; want %s`, n, string(got), want)
+	}
+}
+
+func Test_DecodeYAML_Errors(t *testing.T) {
+	tests := []struct {
+		data   []byte
+		errstr string
+	}{
+		{
+			data:   []byte(`"`),
+			errstr: "yaml: found unexpected end of stream",
+		}, {
+			data:   []byte(`}`),
+			errstr: "yaml: did not find expected node content",
+		}, {
+			data:   []byte("{\n1"),
+			errstr: `yaml: line 2: did not find expected ',' or '}'`,
+		},
+	}
+	for i, test := range tests {
+		dec := yaml.NewDecoder(bytes.NewReader(test.data))
+		got, err := DecodeYAML(dec)
+		if got != nil {
+			t.Errorf(`Error tests[%d] returns not nil %#v`, i, got)
+		}
+		if err == nil {
+			t.Fatalf(`Error tests[%d] returns no error`, i)
+		}
+		if err.Error() != test.errstr {
+			t.Errorf(`Error tests[%d] returns error %s; want %s`, i, err.Error(), test.errstr)
+		}
 	}
 }
 

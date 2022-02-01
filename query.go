@@ -191,9 +191,25 @@ func ParseQuery(expr string) (Query, error) {
 
 type token struct {
 	cmd      string
-	word     string
+	quoted   bool
+	value    string
 	parent   *token
 	children []*token
+}
+
+func (t *token) toValue() Node {
+	if !t.quoted {
+		if t.value == "true" {
+			return BoolValue(true)
+		}
+		if t.value == "false" {
+			return BoolValue(false)
+		}
+		if n, err := strconv.ParseFloat(t.value, 64); err == nil {
+			return NumberValue(n)
+		}
+	}
+	return StringValue(t.value)
 }
 
 func tokenizeQuery(expr string) (*token, error) {
@@ -201,19 +217,21 @@ func tokenizeQuery(expr string) (*token, error) {
 	ms := tokenRegexp.FindAllStringSubmatch(expr, -1)
 	for _, m := range ms {
 		if m[1] != "" || m[3] != "" {
-			word := m[1]
-			if word == "" {
-				word = m[3]
+			value := m[1]
+			quoted := value != ""
+			if !quoted {
+				value = m[3]
 			}
 			var lastChild *token
 			if len(current.children) > 0 {
 				lastChild = current.children[len(current.children)-1]
 			}
 			if lastChild != nil && lastChild.cmd == "." {
-				lastChild.word = word
+				lastChild.value = value
+				lastChild.quoted = quoted
 				continue
 			}
-			t := &token{word: word}
+			t := &token{value: value, quoted: quoted}
 			current.children = append(current.children, t)
 			continue
 		}
@@ -243,11 +261,11 @@ func tokenToQuery(t *token, expr string) (Query, error) {
 	switch t.cmd {
 	case "":
 		if child == 0 {
-			return ValueQuery{ToValue(t.word)}, nil
+			return ValueQuery{t.toValue()}, nil
 		}
 	case ".":
-		if t.word != "" {
-			return MapQuery(t.word), nil
+		if t.value != "" {
+			return MapQuery(t.value), nil
 		}
 		return NopQuery, nil
 	case "[":
@@ -255,18 +273,18 @@ func tokenToQuery(t *token, expr string) (Query, error) {
 			return SelectQuery{}, nil
 		}
 		if child == 1 {
-			i, err := strconv.Atoi(t.children[0].word)
+			i, err := strconv.Atoi(t.children[0].value)
 			if err != nil {
 				return nil, fmt.Errorf(`Syntax error: invalid index: "%s"`, expr)
 			}
 			return ArrayQuery(i), nil
 		}
 		if child == 3 && t.children[1].cmd == ":" {
-			from, err := strconv.Atoi(t.children[0].word)
+			from, err := strconv.Atoi(t.children[0].value)
 			if err != nil {
 				return nil, fmt.Errorf(`Syntax error: invalid range: "%s"`, expr)
 			}
-			to, err := strconv.Atoi(t.children[2].word)
+			to, err := strconv.Atoi(t.children[2].value)
 			if err != nil {
 				return nil, fmt.Errorf(`Syntax error: invalid range: "%s"`, expr)
 			}

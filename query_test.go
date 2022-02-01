@@ -11,7 +11,7 @@ import (
 // printToken prints token tree for debug.
 func printToken(w io.Writer, t *token, depth int) {
 	indent := strings.Repeat("\t", depth)
-	fmt.Fprintf(w, "%s{%s} %s\n", indent, t.cmd, t.word)
+	fmt.Fprintf(w, "%s{%s} %s\n", indent, t.cmd, t.value)
 	if len(t.children) > 0 {
 		depth++
 		for _, c := range t.children {
@@ -163,8 +163,8 @@ func Test_ParseQuery(t *testing.T) {
 				MapQuery("book"),
 				SelectQuery{
 					Selectors: []Selector{
-						Comparator{MapQuery("category"), EQ, ValueQuery{ToValue("fiction")}},
-						Comparator{MapQuery("price"), LT, ValueQuery{ToValue("10")}},
+						Comparator{MapQuery("category"), EQ, ValueQuery{StringValue("fiction")}},
+						Comparator{MapQuery("price"), LT, ValueQuery{NumberValue(10)}},
 					},
 				},
 				MapQuery("title"),

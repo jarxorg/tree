@@ -40,10 +40,11 @@ func (f *format) Set(value string) error {
 }
 
 var (
-	isHelp       = false
+	isHelp       bool
 	inputFormat  = format("json")
 	outputFormat = format("json")
-	isExpand     = false
+	isExpand     bool
+	isRaw        bool
 )
 
 func init() {
@@ -51,6 +52,7 @@ func init() {
 	flag.Var(&inputFormat, "i", `input format (json or yaml) (default "json")`)
 	flag.Var(&outputFormat, "o", `output format (json or yaml) (default "json")`)
 	flag.BoolVar(&isExpand, "x", false, "expand results")
+	flag.BoolVar(&isRaw, "r", false, "output raw strings")
 
 	flag.Usage = func() {
 		fmt.Fprintf(os.Stderr, "%s\n\nUsage:\n  %s\n\n", desc, usage)
@@ -132,7 +134,7 @@ func evaluate(node tree.Node) error {
 }
 
 func output(node tree.Node) error {
-	if node.Type().IsValue() {
+	if isRaw && node.Type().IsValue() {
 		fmt.Println(node.Value().String())
 		return nil
 	}

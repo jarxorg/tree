@@ -43,12 +43,14 @@ var (
 	isHelp       = false
 	inputFormat  = format("json")
 	outputFormat = format("json")
+	isExpand     = false
 )
 
 func init() {
 	flag.BoolVar(&isHelp, "h", false, "help for "+cmd)
 	flag.Var(&inputFormat, "i", `input format (json or yaml) (default "json")`)
 	flag.Var(&outputFormat, "o", `output format (json or yaml) (default "json")`)
+	flag.BoolVar(&isExpand, "x", false, "expand results")
 
 	flag.Usage = func() {
 		fmt.Fprintf(os.Stderr, "%s\n\nUsage:\n  %s\n\n", desc, usage)
@@ -83,23 +85,20 @@ func run() error {
 }
 
 func runJSON() error {
-	i := 0
 	dec := json.NewDecoder(os.Stdin)
 	for dec.More() {
 		n, err := tree.DecodeJSON(dec)
 		if err != nil {
 			return err
 		}
-		if err := evaluate(n, i); err != nil {
+		if err := evaluate(n); err != nil {
 			return err
 		}
-		i++
 	}
 	return nil
 }
 
 func runYAML() error {
-	i := 0
 	dec := yaml.NewDecoder(os.Stdin)
 	for {
 		n, err := tree.DecodeYAML(dec)
@@ -109,31 +108,57 @@ func runYAML() error {
 			}
 			return err
 		}
-		if err := evaluate(n, i); err != nil {
+		if err := evaluate(n); err != nil {
 			return err
 		}
-		i++
 	}
 	return nil
 }
 
-func evaluate(node tree.Node, i int) error {
+func evaluate(node tree.Node) error {
 	node, err := tree.Find(node, flag.Arg(0))
 	if err != nil {
 		return err
 	}
-	switch outputFormat {
-	case "yaml":
-		out, err := tree.MarshalYAML(node)
-		if err != nil {
-			return err
-		}
-		if i > 0 {
-			fmt.Println("---")
-		}
-		fmt.Print(string(out))
+	if node == nil {
 		return nil
 	}
+	if isExpand {
+		return node.Each(func(_ interface{}, v tree.Node) error {
+			return output(v)
+		})
+	}
+	return output(node)
+}
+
+func output(node tree.Node) error {
+	if node.Type().IsValue() {
+		fmt.Println(node.Value().String())
+		return nil
+	}
+	switch outputFormat {
+	case "yaml":
+		return outputYAML(node)
+	}
+	return outputJSON(node)
+}
+
+var outputYAMLCalled = 0
+
+func outputYAML(node tree.Node) error {
+	if outputYAMLCalled > 0 {
+		fmt.Println("---")
+	}
+	out, err := tree.MarshalYAML(node)
+	if err != nil {
+		return err
+	}
+	fmt.Print(string(out))
+	outputYAMLCalled++
+	return nil
+}
+
+func outputJSON(node tree.Node) error {
 	out, err := json.MarshalIndent(node, "", "  ")
 	if err != nil {
 		return err

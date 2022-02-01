@@ -22,7 +22,7 @@ var (
 
 // Value provides the accessor of primitive value.
 type Value interface {
-	Type() Type
+	Node
 	String() string
 	Bool() bool
 	Int() int
@@ -59,6 +59,11 @@ func (n StringValue) Value() Value {
 // Get returns nil.
 func (n StringValue) Get(key interface{}) Node {
 	return nil
+}
+
+// Each calls cb(nil, n).
+func (n StringValue) Each(cb func(key interface{}, n Node) error) error {
+	return cb(nil, n)
 }
 
 // Bool returns false.
@@ -138,6 +143,11 @@ func (n BoolValue) Get(key interface{}) Node {
 	return nil
 }
 
+// Each calls cb(nil, n).
+func (n BoolValue) Each(cb func(key interface{}, n Node) error) error {
+	return cb(nil, n)
+}
+
 // Bool returns this.
 func (n BoolValue) Bool() bool {
 	return bool(n)
@@ -203,6 +213,11 @@ func (n NumberValue) Value() Value {
 // Get returns nil.
 func (n NumberValue) Get(key interface{}) Node {
 	return nil
+}
+
+// Each calls cb(nil, n).
+func (n NumberValue) Each(cb func(key interface{}, n Node) error) error {
+	return cb(nil, n)
 }
 
 // Bool returns false.

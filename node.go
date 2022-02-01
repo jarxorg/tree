@@ -56,6 +56,9 @@ type Node interface {
 	// Get returns array/map value that matched by the specified key.
 	// The key type allows int or string.
 	Get(key interface{}) Node
+	// Each calls the callback function for each Array|Map values.
+	// If the node type is not Array|Map then the callback called once with nil key and self as value.
+	Each(cb func(key interface{}, v Node) error) error
 }
 
 // Array represents an array of Node.
@@ -92,6 +95,16 @@ func (n Array) Get(key interface{}) Node {
 	return nil
 }
 
+// Each calls the callback function for each Array values.
+func (n Array) Each(cb func(key interface{}, n Node) error) error {
+	for i, v := range n {
+		if err := cb(i, v); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
 // Map represents a map of Node.
 type Map map[string]Node
 
@@ -122,6 +135,16 @@ func (n Map) Get(key interface{}) Node {
 	switch key.(type) {
 	case string:
 		return n[key.(string)]
+	}
+	return nil
+}
+
+// Each calls the callback function for each Map values.
+func (n Map) Each(cb func(key interface{}, n Node) error) error {
+	for k, v := range n {
+		if err := cb(k, v); err != nil {
+			return err
+		}
 	}
 	return nil
 }

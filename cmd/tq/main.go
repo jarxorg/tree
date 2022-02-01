@@ -17,7 +17,7 @@ const (
 	usage        = cmd + " [flags] [query]"
 	examplesText = `Examples:
   % echo '{"colors": ["red", "green", "blue"]}' | tq '.colors[0]'
-  "red"
+  red
 `
 )
 

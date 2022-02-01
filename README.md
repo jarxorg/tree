@@ -169,8 +169,9 @@ Flags:
     	input format (json or yaml) (default "json") (default json)
   -o value
     	output format (json or yaml) (default "json") (default json)
+  -x	expand results
 
 Examples:
   % echo '{"colors": ["red", "green", "blue"]}' | tq '.colors[0]'
-  "red"
+  red
 ```

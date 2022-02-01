@@ -1,11 +1,12 @@
 package tree
 
 import (
+	"fmt"
 	"reflect"
 	"testing"
 )
 
-func TestType(t *testing.T) {
+func Test_Type(t *testing.T) {
 	tests := []struct {
 		typ  Type
 		is   func() bool
@@ -46,7 +47,7 @@ func TestType(t *testing.T) {
 	}
 }
 
-func TestNode(t *testing.T) {
+func Test_Node(t *testing.T) {
 	a := Array{}
 	m := Map{}
 	tests := []struct {
@@ -66,19 +67,113 @@ func TestNode(t *testing.T) {
 			a: a,
 		},
 	}
-	for _, test := range tests {
+	for i, test := range tests {
 		n := test.n
 		if tt := n.Type(); tt != test.t {
-			t.Errorf(`Error Type returns %v; want %v`, tt, test.t)
+			t.Errorf(`Error tests[%d] Type returns %v; want %v`, i, tt, test.t)
 		}
 		if aa := n.Array(); !reflect.DeepEqual(aa, test.a) {
-			t.Errorf(`Error Array returns %v; want %v`, aa, test.a)
+			t.Errorf(`Error tests[%d] Array returns %v; want %v`, i, aa, test.a)
 		}
 		if mm := n.Map(); !reflect.DeepEqual(mm, test.m) {
-			t.Errorf(`Error Map returns %v; want %v`, mm, test.m)
+			t.Errorf(`Error tests[%d] Map returns %v; want %v`, i, mm, test.m)
 		}
 		if vv := n.Value(); !reflect.DeepEqual(vv, test.v) {
-			t.Errorf(`Error Value returns %v; want %v`, vv, test.v)
+			t.Errorf(`Error tests[%d] Value returns %v; want %v`, i, vv, test.v)
+		}
+	}
+}
+
+func Test_Node_Get(t *testing.T) {
+	tests := []struct {
+		n    Node
+		key  interface{}
+		want Node
+	}{
+		{
+			n:    Array{StringValue("a"), StringValue("b")},
+			key:  1,
+			want: StringValue("b"),
+		}, {
+			n:    Array{StringValue("a"), StringValue("b")},
+			key:  "1",
+			want: StringValue("b"),
+		}, {
+			n:   Array{StringValue("a"), StringValue("b")},
+			key: 1.0,
+		}, {
+			n:   Array{StringValue("a"), StringValue("b")},
+			key: 2,
+		}, {
+			n:    Map{"1": NumberValue(10), "2": NumberValue(20)},
+			key:  "1",
+			want: NumberValue(10),
+		}, {
+			n:    Map{"1": NumberValue(10), "2": NumberValue(20)},
+			key:  1,
+			want: NumberValue(10),
+		}, {
+			n:   Map{"1": NumberValue(10), "2": NumberValue(20)},
+			key: 1.0,
+		}, {
+			n:   Map{"1": NumberValue(10), "2": NumberValue(20)},
+			key: "3",
+		}, {
+			n: StringValue("str"),
+		}, {
+			n: BoolValue(true),
+		}, {
+			n: NumberValue(1),
+		},
+	}
+	for i, test := range tests {
+		got := test.n.Get(test.key)
+		if !reflect.DeepEqual(got, test.want) {
+			t.Errorf("Error tests[%d] got %q; want %q", i, got, test.want)
+		}
+	}
+}
+
+func Test_Node_Each(t *testing.T) {
+	tests := []struct {
+		n    Node
+		want map[interface{}]Node
+	}{
+		{
+			n:    Array{StringValue("a"), StringValue("b")},
+			want: map[interface{}]Node{0: StringValue("a"), 1: StringValue("b")},
+		}, {
+			n:    Map{"a": NumberValue(0), "b": NumberValue(1)},
+			want: map[interface{}]Node{"a": NumberValue(0), "b": NumberValue(1)},
+		}, {
+			n:    StringValue("str"),
+			want: map[interface{}]Node{nil: StringValue("str")},
+		}, {
+			n:    BoolValue(true),
+			want: map[interface{}]Node{nil: BoolValue(true)},
+		}, {
+			n:    NumberValue(1),
+			want: map[interface{}]Node{nil: NumberValue(1)},
+		},
+	}
+	for i, test := range tests {
+		got := map[interface{}]Node{}
+		err := test.n.Each(func(key interface{}, v Node) error {
+			got[key] = v
+			return nil
+		})
+		if err != nil {
+			t.Fatal(err)
+		}
+		if !reflect.DeepEqual(got, test.want) {
+			t.Errorf(`Error tests[%d] got %v; want %v`, i, got, test.want)
+		}
+		wantErr := fmt.Errorf("test%d", i)
+		gotErr := test.n.Each(func(key interface{}, v Node) error {
+			return wantErr
+		})
+		if wantErr != gotErr {
+			t.Errorf(`Error tests[%d] got error %v; want %v`, i, gotErr, wantErr)
 		}
 	}
 }

@@ -63,7 +63,6 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	fmt.Println()
 	fmt.Println(string(j))
 	fmt.Println()
 
@@ -71,7 +70,7 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	fmt.Println(string(y))
+	fmt.Print(string(y))
 	fmt.Println()
 
 	var n tree.Map
@@ -79,9 +78,16 @@ func main() {
 		log.Fatal(err)
 	}
 	fmt.Printf("%#v\n", n)
+	fmt.Println()
+
+	r, err := tree.Find(n, ".Colors[1]")
+	if err != nil {
+		log.Fatal(err)
+	}
+	fmt.Printf("%#v\n", r)
+	fmt.Println()
 
 	// Output:
-	//
 	// {"Colors":["Crimson","Red","Ruby","Maroon"],"ID":1,"Name":"Reds"}
 	//
 	// Colors:
@@ -93,6 +99,8 @@ func main() {
 	// Name: Reds
 	//
 	// tree.Map{"Colors":tree.Array{"Crimson", "Red", "Ruby", "Maroon"}, "ID":1, "Name":"Reds"}
+	//
+	// "Red"
 }
 ```
 
@@ -115,18 +123,21 @@ func main() {
     "book": [{
         "category": "reference",
         "author": "Nigel Rees",
+        "authors": ["Nigel Rees"],
         "title": "Sayings of the Century",
         "price": 8.95
       },
       {
         "category": "fiction",
         "author": "Evelyn Waugh",
+        "authors": ["Evelyn Waugh"],
         "title": "Sword of Honour",
         "price": 12.99
       },
       {
         "category": "fiction",
         "author": "Herman Melville",
+        "authors": ["Herman Melville"],
         "title": "Moby Dick",
         "isbn": "0-553-21311-3",
         "price": 8.99
@@ -134,6 +145,7 @@ func main() {
       {
         "category": "fiction",
         "author": "J. R. R. Tolkien",
+        "authors": ["J. R. R. Tolkien"],
         "title": "The Lord of the Rings",
         "isbn": "0-395-19395-8",
         "price": 22.99
@@ -169,8 +181,20 @@ Flags:
     	input format (json or yaml) (default "json") (default json)
   -o value
     	output format (json or yaml) (default "json") (default json)
+  -r	output raw strings
+  -x	expand results
 
 Examples:
   % echo '{"colors": ["red", "green", "blue"]}' | tq '.colors[0]'
-  "red"
+  red
 ```
+
+### for jq user
+
+| tq | jq |
+| - | - |
+| tq '.store.book[0]' | jq '.store.book[0]' |
+| tq -x '.store.book' | jq '.store.book[]' |
+| tq -x '.store.book[1:2].price' | jq '.store.book[1,2] \| .price' |
+| tq -x '.store.book[.category=="fiction" and .price < 10].title' | jq '.store.book[] \| select(.category=="fiction" and .price < 10) \| .title' |
+| tq -x '.store.book[.authors[0] == "Nigel Rees"].title' | jq '.store.book[] \| select(.authors[0] == "Nigel Rees") \| .title' |

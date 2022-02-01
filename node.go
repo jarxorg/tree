@@ -1,5 +1,9 @@
 package tree
 
+import (
+	"strconv"
+)
+
 // Type represents the Node type.
 type Type int
 
@@ -90,7 +94,14 @@ func (n Array) Value() Value {
 func (n Array) Get(key interface{}) Node {
 	switch key.(type) {
 	case int:
-		return n[key.(int)]
+		if k := key.(int); k >= 0 && k < len(n) {
+			return n[k]
+		}
+	case string:
+		k, err := strconv.Atoi(key.(string))
+		if err == nil && k >= 0 && k < len(n) {
+			return n[k]
+		}
 	}
 	return nil
 }
@@ -133,6 +144,8 @@ func (n Map) Value() Value {
 // Get returns an array value as Node.
 func (n Map) Get(key interface{}) Node {
 	switch key.(type) {
+	case int:
+		return n[strconv.Itoa(key.(int))]
 	case string:
 		return n[key.(string)]
 	}

@@ -125,3 +125,20 @@ Name: Reds
 	// Output:
 	// map[Colors:[Crimson Red Ruby Maroon] ID:1 Name:Reds]
 }
+
+func ExampleFind() {
+	group := tree.Map{
+		"ID":     tree.ToValue(1),
+		"Name":   tree.ToValue("Reds"),
+		"Colors": tree.ToArrayValues("Crimson", "Red", "Ruby", "Maroon"),
+	}
+
+	results, err := tree.Find(group, ".Colors[1]")
+	if err != nil {
+		log.Fatal(err)
+	}
+	fmt.Printf("%#v\n", results)
+
+	// Output:
+	// "Red"
+}

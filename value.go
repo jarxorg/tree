@@ -247,17 +247,10 @@ func (n NumberValue) String() string {
 
 // Compare compares n and v.
 func (n NumberValue) Compare(op Operator, v Value) bool {
-	if v == nil || v.Type().IsBoolValue() {
+	if v == nil || !v.Type().IsNumberValue() {
 		return false
 	}
 	nv := v.Float64()
-	if v.Type().IsStringValue() {
-		var err error
-		nv, err = strconv.ParseFloat(v.String(), 64)
-		if err != nil {
-			return false
-		}
-	}
 	nn := n.Float64()
 	switch op {
 	case EQ:

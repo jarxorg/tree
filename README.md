@@ -179,15 +179,21 @@ Usage:
 Flags:
   -h	help for tq
   -i value
-    	input format (json or yaml) (default "json") (default json)
+    	input format (json or yaml) (default json)
   -o value
-    	output format (json or yaml) (default "json") (default json)
+    	output format (json or yaml) (default json)
   -r	output raw strings
+  -t string
+    	golang text/template string (ignore -o flag)
   -x	expand results
 
 Examples:
   % echo '{"colors": ["red", "green", "blue"]}' | tq '.colors[0]'
-  red
+  "red"
+
+  % echo '{"users":[{"id":1,"name":"one"},{"id":2,"name":"two"}]}' | tq -x -t '{{.id}}: {{.name}}' '.users'
+  1: one
+  2: two
 ```
 
 ### for jq user

@@ -43,6 +43,9 @@ func (q MapQuery) Exec(n Node) (Node, error) {
 		return m[key], nil
 	}
 	if a := n.Array(); a != nil {
+		if v := a.Get(key); v != nil {
+			return v, nil
+		}
 		c := Array{}
 		for _, aa := range a {
 			if m := aa.Map(); m != nil {

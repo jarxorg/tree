@@ -294,6 +294,9 @@ func Test_Find(t *testing.T) {
 			expr: `.store.book[0]`,
 			want: n.Get("store").Get("book").Get(0),
 		}, {
+			expr: `.store.book.0`,
+			want: n.Get("store").Get("book").Get(0),
+		}, {
 			expr: `.store.book[0].price`,
 			want: n.Get("store").Get("book").Get(0).Get("price"),
 		}, {

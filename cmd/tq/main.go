@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"text/template"
 
 	"github.com/jarxorg/tree"
 	"gopkg.in/yaml.v2"
@@ -17,7 +18,11 @@ const (
 	usage        = cmd + " [flags] [query]"
 	examplesText = `Examples:
   % echo '{"colors": ["red", "green", "blue"]}' | tq '.colors[0]'
-  red
+  "red"
+
+  % echo '{"users":[{"id":1,"name":"one"},{"id":2,"name":"two"}]}' | tq -x -t '{{.id}}: {{.name}}' '.users'
+  1: one
+  2: two
 `
 )
 
@@ -45,14 +50,17 @@ var (
 	outputFormat = format("json")
 	isExpand     bool
 	isRaw        bool
+	tmplText     string
+	tmpl         *template.Template
 )
 
 func init() {
 	flag.BoolVar(&isHelp, "h", false, "help for "+cmd)
-	flag.Var(&inputFormat, "i", `input format (json or yaml) (default "json")`)
-	flag.Var(&outputFormat, "o", `output format (json or yaml) (default "json")`)
+	flag.Var(&inputFormat, "i", `input format (json or yaml)`)
+	flag.Var(&outputFormat, "o", `output format (json or yaml)`)
 	flag.BoolVar(&isExpand, "x", false, "expand results")
 	flag.BoolVar(&isRaw, "r", false, "output raw strings")
+	flag.StringVar(&tmplText, "t", "", "golang text/template string (ignore -o flag)")
 
 	flag.Usage = func() {
 		fmt.Fprintf(os.Stderr, "%s\n\nUsage:\n  %s\n\n", desc, usage)
@@ -79,6 +87,13 @@ func handleError(err error) {
 }
 
 func run() error {
+	if tmplText != "" {
+		var err error
+		tmpl, err = template.New("").Parse(tmplText)
+		if err != nil {
+			return err
+		}
+	}
 	switch inputFormat {
 	case "yaml":
 		return runYAML()
@@ -136,6 +151,13 @@ func evaluate(node tree.Node) error {
 func output(node tree.Node) error {
 	if isRaw && node.Type().IsValue() {
 		fmt.Println(node.Value().String())
+		return nil
+	}
+	if tmpl != nil {
+		if err := tmpl.Execute(os.Stdout, node); err != nil {
+			return err
+		}
+		fmt.Println()
 		return nil
 	}
 	switch outputFormat {

@@ -52,11 +52,13 @@ func Test_Query(t *testing.T) {
 			n:      ToValue("not array"),
 			errstr: `Cannot index array with index 0`,
 		}, {
-			q:    ArrayRangeQuery{0, 1},
+			q:    ArrayRangeQuery{0, 2},
 			n:    Array{ToValue(0), ToValue(1), ToValue(2)},
 			want: Array{ToValue(0), ToValue(1)},
 		}, {
-			q: ArrayRangeQuery{0, 1},
+			q:    ArrayRangeQuery{1, -1},
+			n:    Array{ToValue(0), ToValue(1), ToValue(2)},
+			want: Array{ToValue(1), ToValue(2)},
 		}, {
 			q:      ArrayRangeQuery{0, 1, 2},
 			n:      Array{},
@@ -74,7 +76,7 @@ func Test_Query(t *testing.T) {
 			n:      Map{"key": ToValue(1)},
 			errstr: `Cannot index array with index 0`,
 		}, {
-			q: SelectQuery{Selectors: []Selector{
+			q: SelectQuery{And{
 				Comparator{MapQuery("key"), EQ, ValueQuery{ToValue(1)}},
 			}},
 			n:    Array{Map{"key": ToValue(1)}, Map{"key": ToValue(2)}},
@@ -84,20 +86,38 @@ func Test_Query(t *testing.T) {
 			n:    Array{Map{"key": ToValue(1)}, Map{"key": ToValue(2)}},
 			want: Array{Map{"key": ToValue(1)}, Map{"key": ToValue(2)}},
 		}, {
-			q: SelectQuery{Selectors: []Selector{
+			q: SelectQuery{And{
 				Comparator{MapQuery("key"), EQ, ValueQuery{ToValue(1)}},
 			}},
 			n: Map{},
 		}, {
+			q: SelectQuery{
+				And{
+					Or{
+						Comparator{MapQuery("key2"), EQ, ValueQuery{ToValue("a")}},
+						Comparator{MapQuery("key2"), EQ, ValueQuery{ToValue("b")}},
+					},
+					Comparator{MapQuery("key1"), LE, ValueQuery{ToValue(1)}},
+				},
+			},
+			n: Array{
+				Map{"key1": ToValue(1), "key2": ToValue("a")},
+				Map{"key1": ToValue(2), "key2": ToValue("b")},
+				Map{"key1": ToValue(3), "key2": ToValue("c")},
+			},
+			want: Array{
+				Map{"key1": ToValue(1), "key2": ToValue("a")},
+			},
+		}, {
 			q: SelectQuery{},
 		}, {
-			q: SelectQuery{Selectors: []Selector{
+			q: SelectQuery{And{
 				Comparator{ArrayQuery(0), EQ, ValueQuery{ToValue(1)}},
 			}},
 			n:      Array{Map{"key": ToValue(1)}},
 			errstr: `Cannot index array with index 0`,
 		}, {
-			q: SelectQuery{Selectors: []Selector{
+			q: SelectQuery{And{
 				Comparator{ValueQuery{ToValue(1)}, EQ, ArrayQuery(0)},
 			}},
 			n:      Array{Map{"key": ToValue(1)}},
@@ -162,7 +182,7 @@ func Test_ParseQuery(t *testing.T) {
 				MapQuery("store"),
 				MapQuery("book"),
 				SelectQuery{
-					Selectors: []Selector{
+					And{
 						Comparator{MapQuery("category"), EQ, ValueQuery{StringValue("fiction")}},
 						Comparator{MapQuery("price"), LT, ValueQuery{NumberValue(10)}},
 					},
@@ -175,7 +195,7 @@ func Test_ParseQuery(t *testing.T) {
 				MapQuery("store"),
 				MapQuery("book"),
 				SelectQuery{
-					Selectors: []Selector{
+					And{
 						Comparator{FilterQuery{MapQuery("authors"), ArrayQuery(0)}, EQ, ValueQuery{ToValue("Nigel Rees")}},
 					},
 				},
@@ -207,25 +227,25 @@ func Test_ParseQuery_Errors(t *testing.T) {
 			errstr: `Syntax error: no right brackets: "["`,
 		}, {
 			expr:   `]`,
-			errstr: `Syntax error: no left bracket '[': "]"`,
+			errstr: `Syntax error: no left bracket: "]"`,
 		}, {
 			expr:   `[a]`,
-			errstr: `Syntax error: invalid index: "[a]"`,
+			errstr: `Syntax error: invalid array index: "[a]"`,
 		}, {
 			expr:   `[a:b]`,
-			errstr: `Syntax error: invalid range: "[a:b]"`,
+			errstr: `Syntax error: invalid array range: "[a:b]"`,
 		}, {
 			expr:   `[0:a]`,
-			errstr: `Syntax error: invalid range: "[0:a]"`,
+			errstr: `Syntax error: invalid array range: "[0:a]"`,
 		}, {
 			expr:   `[[l] == .r]`,
-			errstr: `Syntax error: invalid index: "[[l] == .r]"`,
+			errstr: `Syntax error: invalid array index: "[[l] == .r]"`,
 		}, {
 			expr:   `[.l == [r]]`,
-			errstr: `Syntax error: invalid index: "[.l == [r]]"`,
+			errstr: `Syntax error: invalid array index: "[.l == [r]]"`,
 		}, {
 			expr:   `.a[a]`,
-			errstr: `Syntax error: invalid index: ".a[a]"`,
+			errstr: `Syntax error: invalid array index: ".a[a]"`,
 		},
 	}
 	for i, test := range tests {
@@ -304,11 +324,10 @@ func Test_Find(t *testing.T) {
 			want: Array{
 				n.Get("store").Get("book").Get(0),
 				n.Get("store").Get("book").Get(1),
-				n.Get("store").Get("book").Get(2),
 			},
 		}, {
-			expr: `.store.book[1:2].price`,
-			want: ToArrayValues(12.99, 8.99),
+			expr: `.store.book[1:].price`,
+			want: ToArrayValues(12.99, 8.99, 22.99),
 		}, {
 			expr: `.store.book[].author`,
 			want: ToArrayValues("Nigel Rees", "Evelyn Waugh", "Herman Melville", "J. R. R. Tolkien"),
@@ -318,6 +337,9 @@ func Test_Find(t *testing.T) {
 		}, {
 			expr: `.store.book[.authors[0] == "Nigel Rees"].title`,
 			want: ToArrayValues("Sayings of the Century"),
+		}, {
+			expr: `.store.book[(.category == "fiction" or .category == "reference") and .price < 10].title`,
+			want: ToArrayValues("Sayings of the Century", "Moby Dick"),
 		},
 	}
 	for i, test := range tests {

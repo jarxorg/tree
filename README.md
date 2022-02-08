@@ -111,9 +111,9 @@ func main() {
 | .store.book[0] | {"category": "reference", "author": "Nigel Rees", "title": "Sayings of the Century", "price": 8.95} |
 | .store.book[0].price | 8.95 |
 | .store.book.0.price | 8.95 |
-| .store.book[1:2].price | [12.99, 8.99] |
+| .store.book[:2].price | [8.95, 12.99] |
 | .store.book[].author | ["Nigel Rees", "Evelyn Waugh", "Herman Melville", "J. R. R. Tolkien"] |
-| .store.book[.category == "fiction" and .price < 10].title | ["Moby Dick"] |
+| .store.book[(.category == "fiction" or .category == "reference") and .price < 10].title | ["Sayings of the Century", "Moby Dick"] |
 | .store.book[.authors[0] == "Nigel Rees"].title | ["Sayings of the Century"] |
 
 ### Illustrative Object
@@ -202,6 +202,6 @@ Examples:
 | - | - |
 | tq '.store.book[0]' | jq '.store.book[0]' |
 | tq -x '.store.book' | jq '.store.book[]' |
-| tq -x '.store.book[1:2].price' | jq '.store.book[1,2] \| .price' |
+| tq -x '.store.book[:2].price' | jq '.store.book[:2][] \| .price' |
 | tq -x '.store.book[.category == "fiction" and .price < 10].title' | jq '.store.book[] \| select(.category == "fiction" and .price < 10) \| .title' |
 | tq -x '.store.book[.authors[0] == "Nigel Rees"].title' | jq '.store.book[] \| select(.authors[0] == "Nigel Rees") \| .title' |

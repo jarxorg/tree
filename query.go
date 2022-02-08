@@ -84,7 +84,13 @@ func (q ArrayRangeQuery) Exec(n Node) (Node, error) {
 		return nil, fmt.Errorf(`Invalid array range %v`, q)
 	}
 	if a := n.Array(); a != nil {
-		return a[q[0] : q[1]+1], nil
+		from, to := q[0], q[1]
+		if from == -1 {
+			return a[:to], nil
+		} else if q[1] == -1 {
+			return a[from:], nil
+		}
+		return a[from:to], nil
 	}
 	return nil, fmt.Errorf(`Cannot index array with range %d:%d`, q[0], q[1])
 }
@@ -106,53 +112,34 @@ func (qs FilterQuery) Exec(n Node) (Node, error) {
 
 // Selector checks if a node is eligible for selection.
 type Selector interface {
-	Matches(n Node) (bool, error)
+	Matches(i int, n Node) (bool, error)
 }
 
-// SelectQuery returns nodes that matched by selectors.
-type SelectQuery struct {
-	Selectors []Selector
-	Or        bool
-}
+type And []Selector
 
-func (q SelectQuery) Eval(n Node) (bool, error) {
-	if len(q.Selectors) == 0 {
-		return true, nil
-	}
-	for _, s := range q.Selectors {
-		ok, err := s.Matches(n)
-		if err != nil {
+func (ss And) Matches(i int, n Node) (bool, error) {
+	for _, s := range ss {
+		ok, err := s.Matches(i, n)
+		if err != nil || !ok {
 			return false, err
-		}
-		if ok {
-			if q.Or {
-				break
-			}
-		} else if !q.Or {
-			return false, nil
 		}
 	}
 	return true, nil
 }
 
-func (q SelectQuery) Exec(n Node) (Node, error) {
-	if n == nil {
-		return nil, nil
-	}
-	if a := n.Array(); a != nil {
-		c := Array{}
-		for _, nn := range a {
-			ok, err := q.Eval(nn)
-			if err != nil {
-				return nil, err
-			}
-			if ok {
-				c = append(c, nn)
-			}
+type Or []Selector
+
+func (ss Or) Matches(i int, n Node) (bool, error) {
+	for _, s := range ss {
+		ok, err := s.Matches(i, n)
+		if err != nil {
+			return false, err
 		}
-		return c, nil
+		if ok {
+			return true, nil
+		}
 	}
-	return nil, nil
+	return false, nil
 }
 
 // Comparator represents a comparable selector.
@@ -162,10 +149,8 @@ type Comparator struct {
 	Right Query
 }
 
-var _ Selector = (*Comparator)(nil)
-
 // Matches evaluates left and right using the operator. (eg. .id == 0)
-func (c Comparator) Matches(n Node) (bool, error) {
+func (c Comparator) Matches(i int, n Node) (bool, error) {
 	l, err := c.Left.Exec(n)
 	if err != nil {
 		return false, err
@@ -180,7 +165,39 @@ func (c Comparator) Matches(n Node) (bool, error) {
 	return l.Value().Compare(c.Op, r.Value()), nil
 }
 
-var tokenRegexp = regexp.MustCompile(`"([^"]*)"|(and|==|<=|>=|[\.\[\]<>:])|(\w+)`)
+// SelectQuery returns nodes that matched by selectors.
+type SelectQuery struct {
+	Selector
+}
+
+func (q SelectQuery) Exec(n Node) (Node, error) {
+	if n == nil || q.Selector == nil {
+		return n, nil
+	}
+	if a := n.Array(); a != nil {
+		c := Array{}
+		for i, nn := range a {
+			ok, err := q.Selector.Matches(i, nn)
+			if err != nil {
+				return nil, err
+			}
+			if ok {
+				c = append(c, nn)
+			}
+		}
+		return c, nil
+	}
+	return nil, nil
+}
+
+var (
+	_ Selector = (And)(nil)
+	_ Selector = (Or)(nil)
+	_ Selector = (*Comparator)(nil)
+	_ Selector = (*SelectQuery)(nil)
+)
+
+var tokenRegexp = regexp.MustCompile(`"([^"]*)"|(and|or|==|<=|>=|[\.\[\]\(\)<>:])|(\w+)`)
 
 // ParseQuery parses the provided expr to a Query.
 // See https://github.com/jarxorg/tree#Query
@@ -215,6 +232,15 @@ func (t *token) toValue() Node {
 	return StringValue(t.value)
 }
 
+func (t *token) indexOfCmd(cmd string) int {
+	for i, c := range t.children {
+		if c.cmd == cmd {
+			return i
+		}
+	}
+	return -1
+}
+
 func tokenizeQuery(expr string) (*token, error) {
 	current := &token{}
 	ms := tokenRegexp.FindAllStringSubmatch(expr, -1)
@@ -240,12 +266,12 @@ func tokenizeQuery(expr string) (*token, error) {
 		}
 		t := &token{cmd: m[2], parent: current}
 		switch m[2] {
-		case "]":
-			if current.cmd != "[" {
-				return nil, fmt.Errorf(`Syntax error: no left bracket '[': "%s"`, expr)
+		case "]", ")":
+			if (m[2] == "]" && current.cmd != "[") || (m[2] == ")" && current.cmd != "(") {
+				return nil, fmt.Errorf(`Syntax error: no left bracket: "%s"`, expr)
 			}
 			current = current.parent
-		case "[":
+		case "[", "(":
 			current.children = append(current.children, t)
 			current = t
 		default:
@@ -278,26 +304,18 @@ func tokenToQuery(t *token, expr string) (Query, error) {
 		if child == 1 {
 			i, err := strconv.Atoi(t.children[0].value)
 			if err != nil {
-				return nil, fmt.Errorf(`Syntax error: invalid index: "%s"`, expr)
+				return nil, fmt.Errorf(`Syntax error: invalid array index: "%s"`, expr)
 			}
 			return ArrayQuery(i), nil
 		}
-		if child == 3 && t.children[1].cmd == ":" {
-			from, err := strconv.Atoi(t.children[0].value)
-			if err != nil {
-				return nil, fmt.Errorf(`Syntax error: invalid range: "%s"`, expr)
-			}
-			to, err := strconv.Atoi(t.children[2].value)
-			if err != nil {
-				return nil, fmt.Errorf(`Syntax error: invalid range: "%s"`, expr)
-			}
-			return ArrayRangeQuery{from, to}, nil
+		if i := t.indexOfCmd(":"); i != -1 {
+			return tokensToArrayRangeQuery(t.children, i, expr)
 		}
-		selectors, err := tokensToSelectors(t.children, expr)
+		selector, err := tokensToSelector(t.children, expr)
 		if err != nil {
 			return nil, err
 		}
-		return SelectQuery{Selectors: selectors}, nil
+		return SelectQuery{selector}, nil
 	}
 	if child == 0 {
 		return nil, fmt.Errorf(`Syntax error: invalid token %s: "%s"`, t.cmd, expr)
@@ -316,41 +334,82 @@ func tokenToQuery(t *token, expr string) (Query, error) {
 	return fq, nil
 }
 
-func tokensToSelectors(ts []*token, expr string) ([]Selector, error) {
+func tokensToArrayRangeQuery(ts []*token, i int, expr string) (Query, error) {
+	from := -1
+	to := -1
+	if j := i - 1; j >= 0 {
+		var err error
+		from, err = strconv.Atoi(ts[j].value)
+		if err != nil {
+			return nil, fmt.Errorf(`Syntax error: invalid array range: %q`, expr)
+		}
+	}
+	if j := i + 1; j < len(ts) {
+		var err error
+		to, err = strconv.Atoi(ts[j].value)
+		if err != nil {
+			return nil, fmt.Errorf(`Syntax error: invalid array range: %q`, expr)
+		}
+	}
+	return ArrayRangeQuery{from, to}, nil
+}
+
+func tokensToSelector(ts []*token, expr string) (Selector, error) {
+	andOr := ""
 	var groups [][]*token
 	off := 0
 	for i, t := range ts {
 		switch t.cmd {
-		case "and":
+		case "and", "or":
+			if andOr != "" && andOr != t.cmd {
+				return nil, fmt.Errorf(`Syntax error: mixed and|or: %q`, expr)
+			}
+			andOr = t.cmd
 			groups = append(groups, ts[off:i])
+			off = i + 1
+		case "(":
+			groups = append(groups, ts[off:i])
+			groups = append(groups, []*token{t})
 			off = i + 1
 		}
 	}
 	groups = append(groups, ts[off:])
 
-	var selectors []Selector
+	var ss []Selector
 	for _, group := range groups {
 		op := -1
 		for i, t := range group {
+			if t.cmd == "(" {
+				sss, err := tokensToSelector(t.children, expr)
+				if err != nil {
+					return nil, err
+				}
+				ss = append(ss, sss)
+				break
+			}
 			switch Operator(t.cmd) {
 			case EQ, GT, GE, LT, LE:
 				op = i
 				break
 			}
 		}
-		if op >= 0 {
-			left, err := tokenToQuery(&token{children: group[0:op]}, expr)
-			if err != nil {
-				return nil, err
-			}
-			right, err := tokenToQuery(&token{children: group[op+1:]}, expr)
-			if err != nil {
-				return nil, err
-			}
-			selectors = append(selectors, Comparator{left, Operator(group[op].cmd), right})
+		if op == -1 {
+			continue
 		}
+		left, err := tokenToQuery(&token{children: group[0:op]}, expr)
+		if err != nil {
+			return nil, err
+		}
+		right, err := tokenToQuery(&token{children: group[op+1:]}, expr)
+		if err != nil {
+			return nil, err
+		}
+		ss = append(ss, Comparator{left, Operator(group[op].cmd), right})
 	}
-	return selectors, nil
+	if andOr == "or" {
+		return Or(ss), nil
+	}
+	return And(ss), nil
 }
 
 // Find finds a node from n using the Query.

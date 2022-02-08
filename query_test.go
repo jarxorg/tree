@@ -163,6 +163,18 @@ func Test_ParseQuery(t *testing.T) {
 				ArrayQuery(0),
 			},
 		}, {
+			expr: `..book[0]`,
+			want: FilterQuery{
+				WalkQuery("book"),
+				ArrayQuery(0),
+			},
+		}, {
+			expr: `..0..0`,
+			want: FilterQuery{
+				WalkQuery("0"),
+				WalkQuery("0"),
+			},
+		}, {
 			expr: `."store"."book"[0]`,
 			want: FilterQuery{
 				MapQuery("store"),
@@ -312,6 +324,9 @@ func Test_Find(t *testing.T) {
 	}{
 		{
 			expr: `.store.book[0]`,
+			want: n.Get("store").Get("book").Get(0),
+		}, {
+			expr: `..book[0]`,
 			want: n.Get("store").Get("book").Get(0),
 		}, {
 			expr: `.store.book.0`,

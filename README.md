@@ -113,6 +113,7 @@ func main() {
 | .store.book.0.price | 8.95 |
 | .store.book[:2].price | [8.95, 12.99] |
 | .store.book[].author | ["Nigel Rees", "Evelyn Waugh", "Herman Melville", "J. R. R. Tolkien"] |
+| ..author[0] | ["Nigel Rees"] |
 | .store.book[(.category == "fiction" or .category == "reference") and .price < 10].title | ["Sayings of the Century", "Moby Dick"] |
 | .store.book[.authors[0] == "Nigel Rees"].title | ["Sayings of the Century"] |
 

@@ -110,11 +110,36 @@ func (qs FilterQuery) Exec(n Node) (Node, error) {
 	return nn, nil
 }
 
+// WalkQuery is a key of each nodes that implements methods of the Query.
+type WalkQuery string
+
+// Exec walks the specified root node and collects matching nodes using itself as a key.
+func (q WalkQuery) Exec(root Node) (Node, error) {
+	key := string(q)
+	c := Array{}
+	err := Walk(root, func(n Node, keys []interface{}) error {
+		if nn := n.Get(key); nn != nil {
+			if aa := nn.Array(); aa != nil {
+				c = append(c, aa...)
+			} else {
+				c = append(c, nn)
+			}
+			return SkipWalk
+		}
+		return nil
+	})
+	if err != nil && err != SkipWalk {
+		return nil, err
+	}
+	return c, nil
+}
+
 // Selector checks if a node is eligible for selection.
 type Selector interface {
 	Matches(i int, n Node) (bool, error)
 }
 
+// And represents selectors that combines each selector with and.
 type And []Selector
 
 func (ss And) Matches(i int, n Node) (bool, error) {
@@ -127,6 +152,7 @@ func (ss And) Matches(i int, n Node) (bool, error) {
 	return true, nil
 }
 
+// Or represents selectors that combines each selector with or.
 type Or []Selector
 
 func (ss Or) Matches(i int, n Node) (bool, error) {
@@ -197,7 +223,7 @@ var (
 	_ Selector = (*SelectQuery)(nil)
 )
 
-var tokenRegexp = regexp.MustCompile(`"([^"]*)"|(and|or|==|<=|>=|[\.\[\]\(\)<>:])|(\w+)`)
+var tokenRegexp = regexp.MustCompile(`"([^"]*)"|(and|or|==|<=|>=|\.\.|[\.\[\]\(\)<>:])|(\w+)`)
 
 // ParseQuery parses the provided expr to a Query.
 // See https://github.com/jarxorg/tree#Query
@@ -255,7 +281,7 @@ func tokenizeQuery(expr string) (*token, error) {
 			if len(current.children) > 0 {
 				lastChild = current.children[len(current.children)-1]
 			}
-			if lastChild != nil && lastChild.cmd == "." {
+			if lastChild != nil && (lastChild.cmd == "." || lastChild.cmd == "..") {
 				lastChild.value = value
 				lastChild.quoted = quoted
 				continue
@@ -295,6 +321,11 @@ func tokenToQuery(t *token, expr string) (Query, error) {
 	case ".":
 		if t.value != "" {
 			return MapQuery(t.value), nil
+		}
+		return NopQuery, nil
+	case "..":
+		if t.value != "" {
+			return WalkQuery(t.value), nil
 		}
 		return NopQuery, nil
 	case "[":

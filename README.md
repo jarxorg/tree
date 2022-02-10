@@ -104,6 +104,10 @@ func main() {
 }
 ```
 
+### Using other parsers
+
+Tree may works on other parsers those has compatible with "encoding/json" or "gopkg.in/yaml.v2". See [examples](examples) directory.
+
 ## Query
 
 | Tree Query | Results |

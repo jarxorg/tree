@@ -40,9 +40,9 @@ func ToValue(v interface{}) Node {
 
 // ToArrayValues calss ToValues for each provided vs and returns them as an Array.
 func ToArrayValues(vs ...interface{}) Array {
-	a := Array{}
-	for _, v := range vs {
-		a = append(a, ToValue(v))
+	a := make(Array, len(vs))
+	for i, v := range vs {
+		a[i] = ToValue(v)
 	}
 	return a
 }
@@ -57,9 +57,9 @@ func ToNode(v interface{}) Node {
 		return v.(Node)
 	case []interface{}:
 		a := v.([]interface{})
-		aa := Array{}
-		for _, vv := range a {
-			aa = append(aa, ToNode(vv))
+		aa := make(Array, len(a))
+		for i, vv := range a {
+			aa[i] = ToNode(vv)
 		}
 		return aa
 	case map[string]interface{}:
@@ -119,9 +119,11 @@ func walk(n Node, lastKeys []interface{}, fn WalkFunc) error {
 		return nil
 	}
 	if m := n.Map(); m != nil {
-		var sorted []string
+		sorted := make([]string, len(m))
+		i := 0
 		for k := range m {
-			sorted = append(sorted, k)
+			sorted[i] = k
+			i++
 		}
 		sort.Strings(sorted)
 		for _, k := range sorted {

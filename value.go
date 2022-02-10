@@ -66,6 +66,11 @@ func (n StringValue) Each(cb func(key interface{}, n Node) error) error {
 	return cb(nil, n)
 }
 
+// Find finds a node using the query expression.
+func (n StringValue) Find(expr string) (Node, error) {
+	return Find(n, expr)
+}
+
 // Bool returns false.
 func (n StringValue) Bool() bool {
 	return false
@@ -148,6 +153,11 @@ func (n BoolValue) Each(cb func(key interface{}, n Node) error) error {
 	return cb(nil, n)
 }
 
+// Find finds a node using the query expression.
+func (n BoolValue) Find(expr string) (Node, error) {
+	return Find(n, expr)
+}
+
 // Bool returns this.
 func (n BoolValue) Bool() bool {
 	return bool(n)
@@ -218,6 +228,11 @@ func (n NumberValue) Get(key interface{}) Node {
 // Each calls cb(nil, n).
 func (n NumberValue) Each(cb func(key interface{}, n Node) error) error {
 	return cb(nil, n)
+}
+
+// Find finds a node using the query expression.
+func (n NumberValue) Find(expr string) (Node, error) {
+	return Find(n, expr)
 }
 
 // Bool returns false.

@@ -1,6 +1,9 @@
 package tree
 
-import "testing"
+import (
+	"reflect"
+	"testing"
+)
 
 func Test_Value(t *testing.T) {
 	tests := []struct {
@@ -117,6 +120,37 @@ func Test_Value_Compare(t *testing.T) {
 		got := test.n.Compare(test.op, test.v)
 		if got != test.want {
 			t.Errorf(`Error tests[%d] returns %v; want %v`, i, got, test.want)
+		}
+	}
+}
+
+func Test_Value_Find(t *testing.T) {
+	tests := []struct {
+		n    Node
+		expr string
+		want Node
+	}{
+		{
+			n:    StringValue("str"),
+			expr: ".",
+			want: StringValue("str"),
+		}, {
+			n:    BoolValue(true),
+			expr: ".",
+			want: BoolValue(true),
+		}, {
+			n:    NumberValue(1),
+			expr: ".",
+			want: NumberValue(1),
+		},
+	}
+	for i, test := range tests {
+		got, err := test.n.Find(test.expr)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if !reflect.DeepEqual(got, test.want) {
+			t.Errorf("Error tests[%d] returns %#v; want %#v", i, got, test.want)
 		}
 	}
 }

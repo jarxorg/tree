@@ -63,6 +63,8 @@ type Node interface {
 	// Each calls the callback function for each Array|Map values.
 	// If the node type is not Array|Map then the callback called once with nil key and self as value.
 	Each(cb func(key interface{}, v Node) error) error
+	// Find finds a node using the query expression.
+	Find(expr string) (Node, error)
 }
 
 // Array represents an array of Node.
@@ -116,6 +118,11 @@ func (n Array) Each(cb func(key interface{}, n Node) error) error {
 	return nil
 }
 
+// Find finds a node using the query expression.
+func (n Array) Find(expr string) (Node, error) {
+	return Find(n, expr)
+}
+
 // Map represents a map of Node.
 type Map map[string]Node
 
@@ -160,4 +167,9 @@ func (n Map) Each(cb func(key interface{}, n Node) error) error {
 		}
 	}
 	return nil
+}
+
+// Find finds a node using the query expression.
+func (n Map) Find(expr string) (Node, error) {
+	return Find(n, expr)
 }

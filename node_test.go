@@ -177,3 +177,30 @@ func Test_Node_Each(t *testing.T) {
 		}
 	}
 }
+
+func Test_Node_Find(t *testing.T) {
+	tests := []struct {
+		n    Node
+		expr string
+		want Node
+	}{
+		{
+			n:    Array{StringValue("a"), StringValue("b")},
+			expr: ".[0]",
+			want: StringValue("a"),
+		}, {
+			n:    Map{"1": NumberValue(10), "2": NumberValue(20)},
+			expr: ".1",
+			want: NumberValue(10),
+		},
+	}
+	for i, test := range tests {
+		got, err := test.n.Find(test.expr)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if !reflect.DeepEqual(got, test.want) {
+			t.Errorf("Error tests[%d] returns %#v; want %#v", i, got, test.want)
+		}
+	}
+}

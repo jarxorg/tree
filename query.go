@@ -74,7 +74,9 @@ func (q ArrayRangeQuery) Exec(n Node) ([]Node, error) {
 // SlurpQuery is a special query that works in FilterQuery.
 type SlurpQuery struct{}
 
-// Exec returns a node array of length 1.
+// Exec returns the provided node into a single node array.
+// FilterQuery calls q.Exec(Array(results)), which has the effect of to slurp
+// all the results into a single node array.
 func (q SlurpQuery) Exec(n Node) ([]Node, error) {
 	return []Node{n}, nil
 }

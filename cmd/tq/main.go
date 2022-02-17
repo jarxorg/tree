@@ -49,6 +49,7 @@ var (
 	inputFormat  = format("json")
 	outputFormat = format("json")
 	isExpand     bool
+	isSlurp      bool
 	isRaw        bool
 	tmplText     string
 	tmpl         *template.Template
@@ -59,6 +60,7 @@ func init() {
 	flag.Var(&inputFormat, "i", `input format (json or yaml)`)
 	flag.Var(&outputFormat, "o", `output format (json or yaml)`)
 	flag.BoolVar(&isExpand, "x", false, "expand results")
+	flag.BoolVar(&isSlurp, "s", false, "slurp all results into an array")
 	flag.BoolVar(&isRaw, "r", false, "output raw strings")
 	flag.StringVar(&tmplText, "t", "", "golang text/template string (ignore -o flag)")
 
@@ -133,19 +135,33 @@ func runYAML() error {
 }
 
 func evaluate(node tree.Node) error {
-	node, err := tree.Find(node, flag.Arg(0))
+	rs, err := tree.Find(node, flag.Arg(0))
 	if err != nil {
 		return err
 	}
-	if node == nil {
+	if len(rs) == 0 {
 		return nil
 	}
-	if isExpand {
-		return node.Each(func(_ interface{}, v tree.Node) error {
-			return output(v)
-		})
+	if isSlurp {
+		rs = []tree.Node{tree.Array(rs)}
 	}
-	return output(node)
+	if isExpand {
+		cb := func(_ interface{}, v tree.Node) error {
+			return output(v)
+		}
+		for _, r := range rs {
+			if err := r.Each(cb); err != nil {
+				return err
+			}
+		}
+		return nil
+	}
+	for _, r := range rs {
+		if err := output(r); err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 func output(node tree.Node) error {

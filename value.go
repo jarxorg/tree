@@ -67,7 +67,7 @@ func (n StringValue) Each(cb func(key interface{}, n Node) error) error {
 }
 
 // Find finds a node using the query expression.
-func (n StringValue) Find(expr string) (Node, error) {
+func (n StringValue) Find(expr string) ([]Node, error) {
 	return Find(n, expr)
 }
 
@@ -154,7 +154,7 @@ func (n BoolValue) Each(cb func(key interface{}, n Node) error) error {
 }
 
 // Find finds a node using the query expression.
-func (n BoolValue) Find(expr string) (Node, error) {
+func (n BoolValue) Find(expr string) ([]Node, error) {
 	return Find(n, expr)
 }
 
@@ -231,7 +231,7 @@ func (n NumberValue) Each(cb func(key interface{}, n Node) error) error {
 }
 
 // Find finds a node using the query expression.
-func (n NumberValue) Find(expr string) (Node, error) {
+func (n NumberValue) Find(expr string) ([]Node, error) {
 	return Find(n, expr)
 }
 

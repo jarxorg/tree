@@ -128,20 +128,20 @@ func Test_Value_Find(t *testing.T) {
 	tests := []struct {
 		n    Node
 		expr string
-		want Node
+		want []Node
 	}{
 		{
 			n:    StringValue("str"),
 			expr: ".",
-			want: StringValue("str"),
+			want: []Node{StringValue("str")},
 		}, {
 			n:    BoolValue(true),
 			expr: ".",
-			want: BoolValue(true),
+			want: []Node{BoolValue(true)},
 		}, {
 			n:    NumberValue(1),
 			expr: ".",
-			want: NumberValue(1),
+			want: []Node{NumberValue(1)},
 		},
 	}
 	for i, test := range tests {

@@ -14,22 +14,28 @@ func MarshalJSON(n Node) ([]byte, error) {
 // DecodeJSON decodes JSON as a node using the provided decoder.
 func DecodeJSON(dec *json.Decoder) (Node, error) {
 	t, err := dec.Token()
-	if err != nil {
+	if err != nil || t == nil {
 		return nil, err
 	}
-	d, ok := t.(json.Delim)
-	if !ok {
-		return nil, fmt.Errorf("Unknown token %#v", t)
-	}
-	switch ds := d.String(); ds {
-	case "{":
-		m := Map{}
-		if err := jsonMap(dec, &m); err != nil {
-			return nil, err
+	switch t.(type) {
+	case string:
+		return StringValue(t.(string)), nil
+	case float64:
+		return NumberValue(t.(float64)), nil
+	case bool:
+		return BoolValue(t.(bool)), nil
+	case json.Delim:
+		d := t.(json.Delim)
+		switch ds := d.String(); ds {
+		case "{":
+			m := Map{}
+			if err := jsonMap(dec, &m); err != nil {
+				return nil, err
+			}
+			return m, nil
+		case "[":
+			return jsonArray(dec, Array{})
 		}
-		return m, nil
-	case "[":
-		return jsonArray(dec, Array{})
 	}
 	return nil, fmt.Errorf("Unknown token %#v", t)
 }

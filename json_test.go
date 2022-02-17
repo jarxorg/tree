@@ -67,9 +67,6 @@ func Test_DecodeJSON_Errors(t *testing.T) {
 		errstr string
 	}{
 		{
-			data:   []byte(`0`),
-			errstr: "Unknown token 0",
-		}, {
 			data:   []byte(`"`),
 			errstr: "unexpected EOF",
 		}, {
@@ -98,9 +95,10 @@ func Test_DecodeJSON_Errors(t *testing.T) {
 func Test_UnmarshalJSON(t *testing.T) {
 	tests := []struct {
 		want Node
-		data []byte
+		data string
 	}{
 		{
+			data: `{"a":1,"b":true,"c":null,"d":["1",2,true],"e":{"x":"x"}}`,
 			want: Map{
 				"a": NumberValue(1),
 				"b": BoolValue(true),
@@ -114,8 +112,8 @@ func Test_UnmarshalJSON(t *testing.T) {
 					"x": StringValue("x"),
 				},
 			},
-			data: []byte(`{"a":1,"b":true,"c":null,"d":["1",2,true],"e":{"x":"x"}}`),
 		}, {
+			data: `["1",2,true,null,{"a":1,"b":true,"c":null},["x"]]`,
 			want: Array{
 				StringValue("1"),
 				NumberValue(2),
@@ -130,11 +128,22 @@ func Test_UnmarshalJSON(t *testing.T) {
 					StringValue("x"),
 				},
 			},
-			data: []byte(`["1",2,true,null,{"a":1,"b":true,"c":null},["x"]]`),
+		}, {
+			data: `1`,
+			want: NumberValue(1),
+		}, {
+			data: `"str"`,
+			want: StringValue("str"),
+		}, {
+			data: `true`,
+			want: BoolValue(true),
+		}, {
+			data: `null`,
+			want: nil,
 		},
 	}
 	for _, test := range tests {
-		got, err := UnmarshalJSON(test.data)
+		got, err := UnmarshalJSON([]byte(test.data))
 		if err != nil {
 			log.Fatal(err)
 		}

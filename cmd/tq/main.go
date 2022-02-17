@@ -9,13 +9,14 @@ import (
 	"text/template"
 
 	"github.com/jarxorg/tree"
+	"golang.org/x/term"
 	"gopkg.in/yaml.v2"
 )
 
 const (
 	cmd          = "tq"
 	desc         = cmd + " is a portable command-line JSON/YAML processor."
-	usage        = cmd + " [flags] [query]"
+	usage        = cmd + " [flags] [query] ([file...])"
 	examplesText = `Examples:
   % echo '{"colors": ["red", "green", "blue"]}' | tq '.colors[0]'
   "red"
@@ -74,7 +75,7 @@ func init() {
 
 func main() {
 	flag.Parse()
-	if isHelp {
+	if isHelp || flag.Arg(0) == "" {
 		flag.Usage()
 		return
 	}
@@ -96,15 +97,75 @@ func run() error {
 			return err
 		}
 	}
+
+	fargs := flag.Args()[1:]
+	if len(fargs) == 0 && term.IsTerminal(0) {
+		flag.Usage()
+		return nil
+	}
+
+	in, err := newInputReader(fargs)
+	if err != nil {
+		return err
+	}
+	defer in.Close()
+
 	switch inputFormat {
 	case "yaml":
-		return runYAML()
+		return evaluateYAML(in)
 	}
-	return runJSON()
+	return evaluateJSON(in)
 }
 
-func runJSON() error {
-	dec := json.NewDecoder(os.Stdin)
+type inputReader struct {
+	io.Reader
+	cs []io.Closer
+}
+
+func newInputReader(fargs []string) (*inputReader, error) {
+	if len(fargs) == 0 {
+		return &inputReader{Reader: os.Stdin}, nil
+	}
+	rs := make([]io.Reader, len(fargs))
+	cs := make([]io.Closer, len(fargs))
+	ok := false
+	defer func() {
+		if !ok {
+			for _, c := range cs {
+				if c != nil {
+					c.Close()
+				}
+			}
+		}
+	}()
+	for i, farg := range fargs {
+		var err error
+		f, err := os.Open(farg)
+		if err != nil {
+			return nil, err
+		}
+		rs[i] = f
+		cs[i] = f
+	}
+	ok = true
+	return &inputReader{Reader: io.MultiReader(rs...), cs: cs}, nil
+}
+
+func (r *inputReader) Close() error {
+	var errs []error
+	for _, c := range r.cs {
+		if err := c.Close(); err != nil {
+			errs = append(errs, err)
+		}
+	}
+	if len(errs) > 0 {
+		return errs[0]
+	}
+	return nil
+}
+
+func evaluateJSON(in io.Reader) error {
+	dec := json.NewDecoder(in)
 	for dec.More() {
 		n, err := tree.DecodeJSON(dec)
 		if err != nil {
@@ -117,8 +178,8 @@ func runJSON() error {
 	return nil
 }
 
-func runYAML() error {
-	dec := yaml.NewDecoder(os.Stdin)
+func evaluateYAML(in io.Reader) error {
+	dec := yaml.NewDecoder(in)
 	for {
 		n, err := tree.DecodeYAML(dec)
 		if err != nil {

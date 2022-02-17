@@ -24,19 +24,17 @@ func Test_Query(t *testing.T) {
 	tests := []struct {
 		q      Query
 		n      Node
-		want   Node
+		want   []Node
 		errstr string
 	}{
 		{
-			q:    NopQuery,
+			q:    NopQuery{},
 			n:    Array{},
-			want: Array{},
+			want: []Node{Array{}},
 		}, {
 			q:    MapQuery("key"),
 			n:    Map{"key": ToValue("value")},
-			want: ToValue("value"),
-		}, {
-			q: MapQuery("key"),
+			want: []Node{ToValue("value")},
 		}, {
 			q:      MapQuery("key"),
 			n:      ToValue("not map"),
@@ -44,9 +42,7 @@ func Test_Query(t *testing.T) {
 		}, {
 			q:    ArrayQuery(0),
 			n:    Array{ToValue(1)},
-			want: ToValue(1),
-		}, {
-			q: ArrayQuery(0),
+			want: []Node{ToValue(1)},
 		}, {
 			q:      ArrayQuery(0),
 			n:      ToValue("not array"),
@@ -54,11 +50,11 @@ func Test_Query(t *testing.T) {
 		}, {
 			q:    ArrayRangeQuery{0, 2},
 			n:    Array{ToValue(0), ToValue(1), ToValue(2)},
-			want: Array{ToValue(0), ToValue(1)},
+			want: []Node{ToValue(0), ToValue(1)},
 		}, {
 			q:    ArrayRangeQuery{1, -1},
 			n:    Array{ToValue(0), ToValue(1), ToValue(2)},
-			want: Array{ToValue(1), ToValue(2)},
+			want: []Node{ToValue(1), ToValue(2)},
 		}, {
 			q:      ArrayRangeQuery{0, 1, 2},
 			n:      Array{},
@@ -70,7 +66,7 @@ func Test_Query(t *testing.T) {
 		}, {
 			q:    FilterQuery{MapQuery("key"), ArrayQuery(0)},
 			n:    Map{"key": Array{ToValue(1)}},
-			want: ToValue(1),
+			want: []Node{ToValue(1)},
 		}, {
 			q:      FilterQuery{MapQuery("key"), ArrayQuery(0)},
 			n:      Map{"key": ToValue(1)},
@@ -80,11 +76,11 @@ func Test_Query(t *testing.T) {
 				Comparator{MapQuery("key"), EQ, ValueQuery{ToValue(1)}},
 			}},
 			n:    Array{Map{"key": ToValue(1)}, Map{"key": ToValue(2)}},
-			want: Array{Map{"key": ToValue(1)}},
+			want: []Node{Map{"key": ToValue(1)}},
 		}, {
 			q:    SelectQuery{},
 			n:    Array{Map{"key": ToValue(1)}, Map{"key": ToValue(2)}},
-			want: Array{Map{"key": ToValue(1)}, Map{"key": ToValue(2)}},
+			want: []Node{Map{"key": ToValue(1)}, Map{"key": ToValue(2)}},
 		}, {
 			q: SelectQuery{And{
 				Comparator{MapQuery("key"), EQ, ValueQuery{ToValue(1)}},
@@ -108,8 +104,6 @@ func Test_Query(t *testing.T) {
 			want: Array{
 				Map{"key1": ToValue(1), "key2": ToValue("a")},
 			},
-		}, {
-			q: SelectQuery{},
 		}, {
 			q: SelectQuery{And{
 				Comparator{ArrayQuery(0), EQ, ValueQuery{ToValue(1)}},
@@ -151,7 +145,7 @@ func Test_ParseQuery(t *testing.T) {
 	}{
 		{
 			expr: `.`,
-			want: NopQuery,
+			want: NopQuery{},
 		}, {
 			expr: `[]`,
 			want: SelectQuery{},
@@ -211,6 +205,16 @@ func Test_ParseQuery(t *testing.T) {
 						Comparator{FilterQuery{MapQuery("authors"), ArrayQuery(0)}, EQ, ValueQuery{ToValue("Nigel Rees")}},
 					},
 				},
+			},
+		}, {
+			expr: `.store.book[].author|[0]`,
+			want: FilterQuery{
+				MapQuery("store"),
+				MapQuery("book"),
+				SelectQuery{},
+				MapQuery("author"),
+				SlurpQuery{},
+				ArrayQuery(0),
 			},
 		},
 	}
@@ -320,47 +324,67 @@ func Test_Find(t *testing.T) {
 	}
 	tests := []struct {
 		expr string
-		want Node
+		want []Node
 	}{
 		{
+			expr: `.store`,
+			want: []Node{n.Get("store")},
+		}, {
+			expr: `.store[]`,
+			want: []Node{
+				n.Get("store").Get("bicycle"),
+				n.Get("store").Get("book"),
+			},
+		}, {
 			expr: `.store.book[0]`,
-			want: n.Get("store").Get("book").Get(0),
+			want: []Node{n.Get("store").Get("book").Get(0)},
+		}, {
+			expr: `.store.book[]`,
+			want: []Node{
+				n.Get("store").Get("book").Get(0),
+				n.Get("store").Get("book").Get(1),
+				n.Get("store").Get("book").Get(2),
+				n.Get("store").Get("book").Get(3),
+			},
 		}, {
 			expr: `..book[0]`,
-			want: n.Get("store").Get("book").Get(0),
+			want: []Node{n.Get("store").Get("book").Get(0)},
 		}, {
 			expr: `.store.book.0`,
-			want: n.Get("store").Get("book").Get(0),
+			want: []Node{n.Get("store").Get("book").Get(0)},
 		}, {
 			expr: `.store.book[0].price`,
-			want: n.Get("store").Get("book").Get(0).Get("price"),
+			want: []Node{n.Get("store").Get("book").Get(0).Get("price")},
 		}, {
 			expr: `.store.book[0:2]`,
-			want: Array{
+			want: []Node{
 				n.Get("store").Get("book").Get(0),
 				n.Get("store").Get("book").Get(1),
 			},
 		}, {
 			expr: `.store.book[1:].price`,
-			want: ToArrayValues(12.99, 8.99, 22.99),
+			want: ToNodeValues(12.99, 8.99, 22.99),
 		}, {
 			expr: `.store.book[].author`,
-			want: ToArrayValues("Nigel Rees", "Evelyn Waugh", "Herman Melville", "J. R. R. Tolkien"),
+			want: ToNodeValues("Nigel Rees", "Evelyn Waugh", "Herman Melville", "J. R. R. Tolkien"),
 		}, {
 			expr: `.store.book[.category == "fiction" and .price < 10].title`,
-			want: ToArrayValues("Moby Dick"),
+			want: ToNodeValues("Moby Dick"),
 		}, {
 			expr: `.store.book[.authors[0] == "Nigel Rees"].title`,
-			want: ToArrayValues("Sayings of the Century"),
+			want: ToNodeValues("Sayings of the Century"),
 		}, {
 			expr: `.store.book[(.category == "fiction" or .category == "reference") and .price < 10].title`,
-			want: ToArrayValues("Sayings of the Century", "Moby Dick"),
+			want: ToNodeValues("Sayings of the Century", "Moby Dick"),
+		}, {
+			expr: `.store.book[].author|[0]`,
+			want: ToNodeValues("Nigel Rees"),
 		},
 	}
 	for i, test := range tests {
 		got, err := Find(n, test.expr)
 		if err != nil {
-			t.Fatal(err)
+			t.Fatalf("Fatal tests[%d]: %+v", i, err)
 		}
 		if !reflect.DeepEqual(got, test.want) {
 			t.Errorf("Error tests[%d] returns %#v; want %#v", i, got, test.want)

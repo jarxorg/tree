@@ -8,18 +8,16 @@ import (
 
 // Query is an interface that defines the methods to query a node.
 type Query interface {
-	Exec(n Node) (Node, error)
-}
-
-type nopQuery struct{}
-
-// Exec returns the provided node.
-func (q nopQuery) Exec(n Node) (Node, error) {
-	return n, nil
+	Exec(n Node) ([]Node, error)
 }
 
 // NopQuery is a query that implements no-op Exec method.
-var NopQuery Query = nopQuery{}
+type NopQuery struct{}
+
+// Exec returns the provided node.
+func (q NopQuery) Exec(n Node) ([]Node, error) {
+	return []Node{n}, nil
+}
 
 // ValueQuery is a query that returns the constant value.
 type ValueQuery struct {
@@ -27,59 +25,37 @@ type ValueQuery struct {
 }
 
 // Exec returns the constant value.
-func (q ValueQuery) Exec(n Node) (Node, error) {
-	return q.Node, nil
+func (q ValueQuery) Exec(n Node) ([]Node, error) {
+	return []Node{q.Node}, nil
 }
 
 // MapQuery is a key of the Map that implements methods of the Query.
 type MapQuery string
 
-func (q MapQuery) Exec(n Node) (Node, error) {
-	if n == nil {
-		return nil, nil
-	}
-	key := string(q)
+func (q MapQuery) Exec(n Node) ([]Node, error) {
 	if m := n.Map(); m != nil {
-		return m[key], nil
+		return []Node{m.Get(string(q))}, nil
 	}
 	if a := n.Array(); a != nil {
-		if v := a.Get(key); v != nil {
-			return v, nil
-		}
-		c := Array{}
-		for _, aa := range a {
-			if m := aa.Map(); m != nil {
-				if v, ok := m[key]; ok {
-					c = append(c, v)
-				}
-			}
-		}
-		return c, nil
+		return []Node{a.Get(string(q))}, nil
 	}
-	return nil, fmt.Errorf(`Cannot index array with string "%s"`, key)
+	return nil, fmt.Errorf(`Cannot index array with string "%s"`, q)
 }
 
 // ArrayQuery is an index of the Array that implements methods of the Query.
 type ArrayQuery int
 
-func (q ArrayQuery) Exec(n Node) (Node, error) {
-	if n == nil {
-		return nil, nil
-	}
-	index := int(q)
+func (q ArrayQuery) Exec(n Node) ([]Node, error) {
 	if a := n.Array(); a != nil {
-		return a[index], nil
+		return []Node{a.Get(int(q))}, nil
 	}
-	return nil, fmt.Errorf(`Cannot index array with index %d`, index)
+	return nil, fmt.Errorf(`Cannot index array with index %d`, q)
 }
 
 // ArrayRangeQuery represents a range of the Array that implements methods of the Query.
 type ArrayRangeQuery []int
 
-func (q ArrayRangeQuery) Exec(n Node) (Node, error) {
-	if n == nil {
-		return nil, nil
-	}
+func (q ArrayRangeQuery) Exec(n Node) ([]Node, error) {
 	if len(q) != 2 {
 		return nil, fmt.Errorf(`Invalid array range %v`, q)
 	}
@@ -95,35 +71,55 @@ func (q ArrayRangeQuery) Exec(n Node) (Node, error) {
 	return nil, fmt.Errorf(`Cannot index array with range %d:%d`, q[0], q[1])
 }
 
+// SlurpQuery is a special query that works in FilterQuery.
+type SlurpQuery struct{}
+
+// Exec returns a node array of length 1.
+func (q SlurpQuery) Exec(n Node) ([]Node, error) {
+	return []Node{n}, nil
+}
+
 // FilterQuery consists of multiple queries that filter the nodes in order.
 type FilterQuery []Query
 
-func (qs FilterQuery) Exec(n Node) (Node, error) {
-	nn := n
+func (qs FilterQuery) Exec(n Node) ([]Node, error) {
+	rs := []Node{n}
 	for _, q := range qs {
-		var err error
-		nn, err = q.Exec(nn)
-		if err != nil {
-			return nil, err
+		switch q.(type) {
+		case SlurpQuery:
+			nrs, err := q.Exec(Array(rs))
+			if err != nil {
+				return nil, err
+			}
+			rs = nrs
+			continue
 		}
+		var nrs []Node
+		for _, r := range rs {
+			if r == nil {
+				continue
+			}
+			nr, err := q.Exec(r)
+			if err != nil {
+				return nil, err
+			}
+			nrs = append(nrs, nr...)
+		}
+		rs = nrs
 	}
-	return nn, nil
+	return rs, nil
 }
 
 // WalkQuery is a key of each nodes that implements methods of the Query.
 type WalkQuery string
 
 // Exec walks the specified root node and collects matching nodes using itself as a key.
-func (q WalkQuery) Exec(root Node) (Node, error) {
+func (q WalkQuery) Exec(root Node) ([]Node, error) {
 	key := string(q)
-	c := Array{}
+	var r []Node
 	err := Walk(root, func(n Node, keys []interface{}) error {
 		if nn := n.Get(key); nn != nil {
-			if aa := nn.Array(); aa != nil {
-				c = append(c, aa...)
-			} else {
-				c = append(c, nn)
-			}
+			r = append(r, nn)
 			return SkipWalk
 		}
 		return nil
@@ -131,20 +127,20 @@ func (q WalkQuery) Exec(root Node) (Node, error) {
 	if err != nil && err != SkipWalk {
 		return nil, err
 	}
-	return c, nil
+	return r, nil
 }
 
 // Selector checks if a node is eligible for selection.
 type Selector interface {
-	Matches(i int, n Node) (bool, error)
+	Matches(n Node) (bool, error)
 }
 
 // And represents selectors that combines each selector with and.
 type And []Selector
 
-func (ss And) Matches(i int, n Node) (bool, error) {
+func (ss And) Matches(n Node) (bool, error) {
 	for _, s := range ss {
-		ok, err := s.Matches(i, n)
+		ok, err := s.Matches(n)
 		if err != nil || !ok {
 			return false, err
 		}
@@ -155,9 +151,9 @@ func (ss And) Matches(i int, n Node) (bool, error) {
 // Or represents selectors that combines each selector with or.
 type Or []Selector
 
-func (ss Or) Matches(i int, n Node) (bool, error) {
+func (ss Or) Matches(n Node) (bool, error) {
 	for _, s := range ss {
-		ok, err := s.Matches(i, n)
+		ok, err := s.Matches(n)
 		if err != nil {
 			return false, err
 		}
@@ -176,7 +172,7 @@ type Comparator struct {
 }
 
 // Matches evaluates left and right using the operator. (eg. .id == 0)
-func (c Comparator) Matches(i int, n Node) (bool, error) {
+func (c Comparator) Matches(n Node) (bool, error) {
 	l, err := c.Left.Exec(n)
 	if err != nil {
 		return false, err
@@ -185,10 +181,27 @@ func (c Comparator) Matches(i int, n Node) (bool, error) {
 	if err != nil {
 		return false, err
 	}
-	if l == nil || r == nil {
-		return (l == nil && r == nil), nil
+	var l0, r0 Node
+	switch len(l) {
+	case 0:
+		l0 = nil
+	case 1:
+		l0 = l[0]
+	default:
+		return false, fmt.Errorf("%#v returns no single value %+v", c.Left, l)
 	}
-	return l.Value().Compare(c.Op, r.Value()), nil
+	switch len(r) {
+	case 0:
+		r0 = nil
+	case 1:
+		r0 = r[0]
+	default:
+		return false, fmt.Errorf("%#v returns no single value %+v", c.Right, r)
+	}
+	if l0 == nil || r0 == nil {
+		return (l0 == nil && r0 == nil), nil
+	}
+	return l0.Value().Compare(c.Op, r0.Value()), nil
 }
 
 // SelectQuery returns nodes that matched by selectors.
@@ -196,22 +209,38 @@ type SelectQuery struct {
 	Selector
 }
 
-func (q SelectQuery) Exec(n Node) (Node, error) {
-	if n == nil || q.Selector == nil {
-		return n, nil
-	}
+func (q SelectQuery) Exec(n Node) ([]Node, error) {
 	if a := n.Array(); a != nil {
-		c := Array{}
-		for i, nn := range a {
-			ok, err := q.Selector.Matches(i, nn)
+		if q.Selector == nil {
+			return a, nil
+		}
+		var rs []Node
+		for _, nn := range a {
+			ok, err := q.Selector.Matches(nn)
 			if err != nil {
 				return nil, err
 			}
 			if ok {
-				c = append(c, nn)
+				rs = append(rs, nn)
 			}
 		}
-		return c, nil
+		return rs, nil
+	}
+	if m := n.Map(); m != nil {
+		if q.Selector == nil {
+			return m.Values(), nil
+		}
+		var rs []Node
+		for _, nn := range m.Values() {
+			ok, err := q.Selector.Matches(nn)
+			if err != nil {
+				return nil, err
+			}
+			if ok {
+				rs = append(rs, nn)
+			}
+		}
+		return rs, nil
 	}
 	return nil, nil
 }
@@ -223,7 +252,7 @@ var (
 	_ Selector = (*SelectQuery)(nil)
 )
 
-var tokenRegexp = regexp.MustCompile(`"([^"]*)"|(and|or|==|<=|>=|\.\.|[\.\[\]\(\)<>:])|(\w+)`)
+var tokenRegexp = regexp.MustCompile(`"([^"]*)"|(and|or|==|<=|>=|\.\.|[\.\[\]\(\)\|<>:])|(\w+)`)
 
 // ParseQuery parses the provided expr to a Query.
 // See https://github.com/jarxorg/tree#Query
@@ -318,16 +347,18 @@ func tokenToQuery(t *token, expr string) (Query, error) {
 		if child == 0 {
 			return ValueQuery{t.toValue()}, nil
 		}
+	case "|":
+		return SlurpQuery{}, nil
 	case ".":
 		if t.value != "" {
 			return MapQuery(t.value), nil
 		}
-		return NopQuery, nil
+		return NopQuery{}, nil
 	case "..":
 		if t.value != "" {
 			return WalkQuery(t.value), nil
 		}
-		return NopQuery, nil
+		return NopQuery{}, nil
 	case "[":
 		if child == 0 {
 			return SelectQuery{}, nil
@@ -444,7 +475,7 @@ func tokensToSelector(ts []*token, expr string) (Selector, error) {
 }
 
 // Find finds a node from n using the Query.
-func Find(n Node, expr string) (Node, error) {
+func Find(n Node, expr string) ([]Node, error) {
 	q, err := ParseQuery(expr)
 	if err != nil {
 		return nil, err

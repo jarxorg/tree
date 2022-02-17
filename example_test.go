@@ -133,11 +133,13 @@ func ExampleFind() {
 		"Colors": tree.ToArrayValues("Crimson", "Red", "Ruby", "Maroon"),
 	}
 
-	results, err := tree.Find(group, ".Colors[1]")
+	rs, err := tree.Find(group, ".Colors[1]")
 	if err != nil {
 		log.Fatal(err)
 	}
-	fmt.Printf("%#v\n", results)
+	for _, r := range rs {
+		fmt.Printf("%#v\n", r)
+	}
 
 	// Output:
 	// "Red"

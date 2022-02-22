@@ -93,18 +93,25 @@ func (n Array) Value() Value {
 	return nil
 }
 
-// Get returns an array value as Node.
-func (n Array) Get(key interface{}) Node {
+func (n Array) toIndex(key interface{}) int {
 	switch key.(type) {
 	case int:
 		if k := key.(int); k >= 0 && k < len(n) {
-			return n[k]
+			return k
 		}
 	case string:
 		k, err := strconv.Atoi(key.(string))
 		if err == nil && k >= 0 && k < len(n) {
-			return n[k]
+			return k
 		}
+	}
+	return -1
+}
+
+// Get returns an array value as Node.
+func (n Array) Get(key interface{}) Node {
+	if i := n.toIndex(key); i != -1 {
+		return n[i]
 	}
 	return nil
 }
@@ -122,6 +129,29 @@ func (n Array) Each(cb func(key interface{}, n Node) error) error {
 // Find finds a node using the query expression.
 func (n Array) Find(expr string) ([]Node, error) {
 	return Find(n, expr)
+}
+
+// Set sets v to n[key].
+func (n Array) Set(key interface{}, v Node) Array {
+	if i := n.toIndex(key); i != -1 {
+		n[i] = v
+	}
+	return n
+}
+
+// Delete deletes n[key].
+func (n *Array) Delete(key interface{}) *Array {
+	if i := n.toIndex(key); i != -1 {
+		a := *n
+		*n = append(a[0:i], a[i+1:]...)
+	}
+	return n
+}
+
+// Append appends v to *n.
+func (n *Array) Append(v Node) *Array {
+	*n = append(*n, v)
+	return n
 }
 
 // Map represents a map of Node.
@@ -179,6 +209,28 @@ func (n Map) Values() []Node {
 		values[i] = n[k]
 	}
 	return values
+}
+
+// Set sets v to n[key].
+func (n Map) Set(key interface{}, v Node) Map {
+	switch key.(type) {
+	case int:
+		n[strconv.Itoa(key.(int))] = v
+	case string:
+		n[key.(string)] = v
+	}
+	return n
+}
+
+// Delete deletes n[key].
+func (n Map) Delete(key interface{}) Map {
+	switch key.(type) {
+	case int:
+		delete(n, strconv.Itoa(key.(int)))
+	case string:
+		delete(n, key.(string))
+	}
+	return n
 }
 
 // Each calls the callback function for each Map values.

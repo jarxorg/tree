@@ -204,3 +204,77 @@ func Test_Node_Find(t *testing.T) {
 		}
 	}
 }
+
+func Test_Array_Set(t *testing.T) {
+	want := Array{NumberValue(1), StringValue("2"), BoolValue(true)}
+
+	got := Array{NumberValue(0), StringValue("1"), BoolValue(false)}
+	got.Set(0, NumberValue(1)).Set("1", StringValue("2")).Set(2, BoolValue(true))
+
+	if !reflect.DeepEqual(got, want) {
+		t.Errorf("Error got %#v; want %#v", got, want)
+	}
+}
+
+func Test_Array_Delete(t *testing.T) {
+	want := Array{NumberValue(1)}
+
+	got := Array{NumberValue(1), StringValue("1"), BoolValue(true)}
+	got.Delete(1).Delete("1")
+
+	if !reflect.DeepEqual(got, want) {
+		t.Errorf("Error got %#v; want %#v", got, want)
+	}
+}
+
+func Test_Array_Append(t *testing.T) {
+	want := Array{NumberValue(1), StringValue("2"), BoolValue(true)}
+
+	got := Array{NumberValue(1)}
+	got.Append(StringValue("2")).Append(BoolValue(true))
+
+	if !reflect.DeepEqual(got, want) {
+		t.Errorf("Error got %#v; want %#v", got, want)
+	}
+}
+
+func Test_Map_Set(t *testing.T) {
+	want := Map{
+		"1": NumberValue(10),
+		"2": StringValue("2"),
+		"3": BoolValue(true),
+		"4": StringValue("40"),
+		"5": BoolValue(true),
+	}
+
+	got := Map{
+		"1": NumberValue(1),
+		"2": StringValue("2"),
+		"3": BoolValue(true),
+	}
+	got.Set("1", NumberValue(10)).Set("4", StringValue("40")).Set(5, BoolValue(true))
+
+	if !reflect.DeepEqual(got, want) {
+		t.Errorf("Error got %#v; want %#v", got, want)
+	}
+}
+
+func Test_Map_Delete(t *testing.T) {
+	want := Map{
+		"1": NumberValue(1),
+		"3": BoolValue(true),
+	}
+
+	got := Map{
+		"1": NumberValue(1),
+		"2": StringValue("2"),
+		"3": BoolValue(true),
+		"4": StringValue("4"),
+		"5": BoolValue(true),
+	}
+	got.Delete("2").Delete("4").Delete(5).Delete(7)
+
+	if !reflect.DeepEqual(got, want) {
+		t.Errorf("Error got %#v; want %#v", got, want)
+	}
+}

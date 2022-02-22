@@ -3,7 +3,6 @@ package tree
 import (
 	"errors"
 	"fmt"
-	"sort"
 )
 
 // ToValue converts the specified v to a Value as Node.
@@ -45,6 +44,15 @@ func ToArrayValues(vs ...interface{}) Array {
 		a[i] = ToValue(v)
 	}
 	return a
+}
+
+// ToNodeValues calss ToValues for each provided vs and returns them as []Node.
+func ToNodeValues(vs ...interface{}) []Node {
+	ns := make([]Node, len(vs))
+	for i, v := range vs {
+		ns[i] = ToValue(v)
+	}
+	return ns
 }
 
 // ToNode converts the specified v to an Node.
@@ -119,14 +127,7 @@ func walk(n Node, lastKeys []interface{}, fn WalkFunc) error {
 		return nil
 	}
 	if m := n.Map(); m != nil {
-		sorted := make([]string, len(m))
-		i := 0
-		for k := range m {
-			sorted[i] = k
-			i++
-		}
-		sort.Strings(sorted)
-		for _, k := range sorted {
+		for _, k := range m.Keys() {
 			keys[last] = k
 			if err := walk(m[k], keys, fn); err != nil {
 				return err

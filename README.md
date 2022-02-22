@@ -5,7 +5,7 @@
 
 Tree is a simple structure for dealing with dynamic or unknown JSON/YAML structures in Go.
 
-## Formats
+## Syntax
 
 ### Go
 
@@ -110,16 +110,16 @@ Tree may works on other parsers those has compatible with "encoding/json" or "go
 
 ## Query
 
-| Tree Query | Results |
-| - | - |
-| .store.book[0] | {"category": "reference", "author": "Nigel Rees", "title": "Sayings of the Century", "price": 8.95} |
-| .store.book[0].price | 8.95 |
-| .store.book.0.price | 8.95 |
-| .store.book[:2].price | [8.95, 12.99] |
-| .store.book[].author | ["Nigel Rees", "Evelyn Waugh", "Herman Melville", "J. R. R. Tolkien"] |
-| ..author[0] | ["Nigel Rees"] |
-| .store.book[(.category == "fiction" or .category == "reference") and .price < 10].title | ["Sayings of the Century", "Moby Dick"] |
-| .store.book[.authors[0] == "Nigel Rees"].title | ["Sayings of the Century"] |
+| Query | Description | Results |
+| - | - | - |
+| .store.book[0] | The first book | {"category": "reference", "author": "Nigel Rees", "title": "Sayings of the Century", "price": 8.95} |
+| .store.book[0].price | The price of the first book | 8.95 |
+| .store.book.0.price | The price of the first book (using dot) | 8.95 |
+| .store.book[:2].price | All prices of books[0:2] (index 2 is exclusive) | 8.95, 12.99 |
+| .store.book[].author | All authors of all books | "Nigel Rees", "Evelyn Waugh", "Herman Melville", "J. R. R. Tolkien" |
+| ..author | All authors |  "Nigel Rees", "Evelyn Waugh", "Herman Melville", "J. R. R. Tolkien" |
+| ..author \| [0] | The first author | "Nigel Rees" |
+| .store.book[(.category == "fiction" or .category == "reference") and .price < 10].title | All titles of books these are categoried into "fiction", "reference" and price < 10 | "Sayings of the Century", "Moby Dick" |
 
 ### Illustrative Object
 
@@ -129,21 +129,18 @@ Tree may works on other parsers those has compatible with "encoding/json" or "go
     "book": [{
         "category": "reference",
         "author": "Nigel Rees",
-        "authors": ["Nigel Rees"],
         "title": "Sayings of the Century",
         "price": 8.95
       },
       {
         "category": "fiction",
         "author": "Evelyn Waugh",
-        "authors": ["Evelyn Waugh"],
         "title": "Sword of Honour",
         "price": 12.99
       },
       {
         "category": "fiction",
         "author": "Herman Melville",
-        "authors": ["Herman Melville"],
         "title": "Moby Dick",
         "isbn": "0-553-21311-3",
         "price": 8.99
@@ -151,7 +148,6 @@ Tree may works on other parsers those has compatible with "encoding/json" or "go
       {
         "category": "fiction",
         "author": "J. R. R. Tolkien",
-        "authors": ["J. R. R. Tolkien"],
         "title": "The Lord of the Rings",
         "isbn": "0-395-19395-8",
         "price": 22.99
@@ -167,7 +163,7 @@ Tree may works on other parsers those has compatible with "encoding/json" or "go
 
 ## tq - Command line tool
 
-### Install
+### Installation
 
 ```sh
 go install github.com/jarxorg/tree/cmd/tq@latest
@@ -179,7 +175,7 @@ go install github.com/jarxorg/tree/cmd/tq@latest
 tq is a portable command-line JSON/YAML processor.
 
 Usage:
-  tq [flags] [query]
+  tq [flags] [query] ([file...])
 
 Flags:
   -h	help for tq
@@ -188,6 +184,7 @@ Flags:
   -o value
     	output format (json or yaml) (default json)
   -r	output raw strings
+  -s	slurp all results into an array
   -t string
     	golang text/template string (ignore -o flag)
   -x	expand results
@@ -206,7 +203,6 @@ Examples:
 | tq | jq |
 | - | - |
 | tq '.store.book[0]' | jq '.store.book[0]' |
-| tq -x '.store.book' | jq '.store.book[]' |
-| tq -x '.store.book[:2].price' | jq '.store.book[:2][] \| .price' |
-| tq -x '.store.book[.category == "fiction" and .price < 10].title' | jq '.store.book[] \| select(.category == "fiction" and .price < 10) \| .title' |
-| tq -x '.store.book[.authors[0] == "Nigel Rees"].title' | jq '.store.book[] \| select(.authors[0] == "Nigel Rees") \| .title' |
+| tq '.store.book[]' | jq '.store.book[]' |
+| tq '.store.book[:2].price' | jq '.store.book[:2][] \| .price' |
+| tq '.store.book[.category == "fiction" and .price < 10].title' | jq '.store.book[] \| select(.category == "fiction" and .price < 10) \| .title' |

@@ -1,6 +1,7 @@
 package tree
 
 import (
+	"sort"
 	"strconv"
 )
 
@@ -64,7 +65,7 @@ type Node interface {
 	// If the node type is not Array|Map then the callback called once with nil key and self as value.
 	Each(cb func(key interface{}, v Node) error) error
 	// Find finds a node using the query expression.
-	Find(expr string) (Node, error)
+	Find(expr string) ([]Node, error)
 }
 
 // Array represents an array of Node.
@@ -119,7 +120,7 @@ func (n Array) Each(cb func(key interface{}, n Node) error) error {
 }
 
 // Find finds a node using the query expression.
-func (n Array) Find(expr string) (Node, error) {
+func (n Array) Find(expr string) ([]Node, error) {
 	return Find(n, expr)
 }
 
@@ -159,10 +160,31 @@ func (n Map) Get(key interface{}) Node {
 	return nil
 }
 
+// Keys returns sorted keys of the map.
+func (n Map) Keys() []string {
+	keys := make([]string, len(n))
+	i := 0
+	for k := range n {
+		keys[i] = k
+		i++
+	}
+	sort.Strings(keys)
+	return keys
+}
+
+// Values returns values of the map.
+func (n Map) Values() []Node {
+	values := make([]Node, len(n))
+	for i, k := range n.Keys() {
+		values[i] = n[k]
+	}
+	return values
+}
+
 // Each calls the callback function for each Map values.
 func (n Map) Each(cb func(key interface{}, n Node) error) error {
-	for k, v := range n {
-		if err := cb(k, v); err != nil {
+	for _, k := range n.Keys() {
+		if err := cb(k, n[k]); err != nil {
 			return err
 		}
 	}
@@ -170,6 +192,6 @@ func (n Map) Each(cb func(key interface{}, n Node) error) error {
 }
 
 // Find finds a node using the query expression.
-func (n Map) Find(expr string) (Node, error) {
+func (n Map) Find(expr string) ([]Node, error) {
 	return Find(n, expr)
 }

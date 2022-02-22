@@ -9,13 +9,14 @@ import (
 	"text/template"
 
 	"github.com/jarxorg/tree"
+	"golang.org/x/term"
 	"gopkg.in/yaml.v2"
 )
 
 const (
 	cmd          = "tq"
 	desc         = cmd + " is a portable command-line JSON/YAML processor."
-	usage        = cmd + " [flags] [query]"
+	usage        = cmd + " [flags] [query] ([file...])"
 	examplesText = `Examples:
   % echo '{"colors": ["red", "green", "blue"]}' | tq '.colors[0]'
   "red"
@@ -49,6 +50,7 @@ var (
 	inputFormat  = format("json")
 	outputFormat = format("json")
 	isExpand     bool
+	isSlurp      bool
 	isRaw        bool
 	tmplText     string
 	tmpl         *template.Template
@@ -59,6 +61,7 @@ func init() {
 	flag.Var(&inputFormat, "i", `input format (json or yaml)`)
 	flag.Var(&outputFormat, "o", `output format (json or yaml)`)
 	flag.BoolVar(&isExpand, "x", false, "expand results")
+	flag.BoolVar(&isSlurp, "s", false, "slurp all results into an array")
 	flag.BoolVar(&isRaw, "r", false, "output raw strings")
 	flag.StringVar(&tmplText, "t", "", "golang text/template string (ignore -o flag)")
 
@@ -72,7 +75,7 @@ func init() {
 
 func main() {
 	flag.Parse()
-	if isHelp {
+	if isHelp || flag.Arg(0) == "" {
 		flag.Usage()
 		return
 	}
@@ -94,15 +97,75 @@ func run() error {
 			return err
 		}
 	}
+
+	fargs := flag.Args()[1:]
+	if len(fargs) == 0 && term.IsTerminal(0) {
+		flag.Usage()
+		return nil
+	}
+
+	in, err := newInputReader(fargs)
+	if err != nil {
+		return err
+	}
+	defer in.Close()
+
 	switch inputFormat {
 	case "yaml":
-		return runYAML()
+		return evaluateYAML(in)
 	}
-	return runJSON()
+	return evaluateJSON(in)
 }
 
-func runJSON() error {
-	dec := json.NewDecoder(os.Stdin)
+type inputReader struct {
+	io.Reader
+	cs []io.Closer
+}
+
+func newInputReader(fargs []string) (*inputReader, error) {
+	if len(fargs) == 0 {
+		return &inputReader{Reader: os.Stdin}, nil
+	}
+	rs := make([]io.Reader, len(fargs))
+	cs := make([]io.Closer, len(fargs))
+	ok := false
+	defer func() {
+		if !ok {
+			for _, c := range cs {
+				if c != nil {
+					c.Close()
+				}
+			}
+		}
+	}()
+	for i, farg := range fargs {
+		var err error
+		f, err := os.Open(farg)
+		if err != nil {
+			return nil, err
+		}
+		rs[i] = f
+		cs[i] = f
+	}
+	ok = true
+	return &inputReader{Reader: io.MultiReader(rs...), cs: cs}, nil
+}
+
+func (r *inputReader) Close() error {
+	var errs []error
+	for _, c := range r.cs {
+		if err := c.Close(); err != nil {
+			errs = append(errs, err)
+		}
+	}
+	if len(errs) > 0 {
+		return errs[0]
+	}
+	return nil
+}
+
+func evaluateJSON(in io.Reader) error {
+	dec := json.NewDecoder(in)
 	for dec.More() {
 		n, err := tree.DecodeJSON(dec)
 		if err != nil {
@@ -115,8 +178,8 @@ func runJSON() error {
 	return nil
 }
 
-func runYAML() error {
-	dec := yaml.NewDecoder(os.Stdin)
+func evaluateYAML(in io.Reader) error {
+	dec := yaml.NewDecoder(in)
 	for {
 		n, err := tree.DecodeYAML(dec)
 		if err != nil {
@@ -133,19 +196,33 @@ func runYAML() error {
 }
 
 func evaluate(node tree.Node) error {
-	node, err := tree.Find(node, flag.Arg(0))
+	rs, err := tree.Find(node, flag.Arg(0))
 	if err != nil {
 		return err
 	}
-	if node == nil {
+	if len(rs) == 0 {
 		return nil
 	}
-	if isExpand {
-		return node.Each(func(_ interface{}, v tree.Node) error {
-			return output(v)
-		})
+	if isSlurp {
+		rs = []tree.Node{tree.Array(rs)}
 	}
-	return output(node)
+	if isExpand {
+		cb := func(_ interface{}, v tree.Node) error {
+			return output(v)
+		}
+		for _, r := range rs {
+			if err := r.Each(cb); err != nil {
+				return err
+			}
+		}
+		return nil
+	}
+	for _, r := range rs {
+		if err := output(r); err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 func output(node tree.Node) error {

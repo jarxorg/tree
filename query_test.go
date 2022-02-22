@@ -58,7 +58,7 @@ func Test_Query(t *testing.T) {
 		}, {
 			q:      ArrayRangeQuery{0, 1, 2},
 			n:      Array{},
-			errstr: `Invalid array range [0 1 2]`,
+			errstr: `Invalid array range [0:1:2]`,
 		}, {
 			q:      ArrayRangeQuery{0, 1},
 			n:      Map{},
@@ -105,6 +105,14 @@ func Test_Query(t *testing.T) {
 				Map{"key1": ToValue(1), "key2": ToValue("a")},
 			},
 		}, {
+			q: WalkQuery("key1"),
+			n: Array{
+				Map{"key1": ToValue(1), "key2": ToValue("a")},
+				Map{"key1": ToValue(2), "key2": ToValue("b")},
+				Map{"key1": ToValue(3), "key2": ToValue("c")},
+			},
+			want: Array{ToValue(1), ToValue(2), ToValue(3)},
+		}, {
 			q: SelectQuery{And{
 				Comparator{ArrayQuery(0), EQ, ValueQuery{ToValue(1)}},
 			}},
@@ -122,10 +130,10 @@ func Test_Query(t *testing.T) {
 		got, err := test.q.Exec(test.n)
 		if test.errstr != "" {
 			if err == nil {
-				t.Fatalf("Fatal tests[%d] returns no error", i)
+				t.Fatalf("Fatal tests[%d] %s returns no error", i, test.q)
 			}
 			if err.Error() != test.errstr {
-				t.Errorf(`Error tests[%d] returns error %s; want %s`, i, err.Error(), test.errstr)
+				t.Errorf(`Error tests[%d] %s returns error %s; want %s`, i, test.q, err.Error(), test.errstr)
 			}
 			continue
 		}
@@ -133,6 +141,59 @@ func Test_Query(t *testing.T) {
 			t.Fatal(err)
 		}
 		if !reflect.DeepEqual(got, test.want) {
+			t.Errorf(`Error tests[%d] %s returns %v; want %v`, i, test.q, got, test.want)
+		}
+	}
+}
+
+func Test_Query_String(t *testing.T) {
+	tests := []struct {
+		q    Query
+		want string
+	}{
+		{
+			q:    NopQuery{},
+			want: ".",
+		}, {
+			q:    MapQuery("key"),
+			want: ".key",
+		}, {
+			q:    ArrayQuery(1),
+			want: "[1]",
+		}, {
+			q:    ArrayRangeQuery{0, 2},
+			want: "[0:2]",
+		}, {
+			q:    ArrayRangeQuery{-1, 2},
+			want: "[:2]",
+		}, {
+			q:    SlurpQuery{},
+			want: " | ",
+		}, {
+			q:    FilterQuery{MapQuery("key1"), ArrayQuery(0), MapQuery("key2")},
+			want: ".key1[0].key2",
+		}, {
+			q: SelectQuery{
+				And{
+					Or{
+						Comparator{MapQuery("key2"), EQ, ValueQuery{ToValue("a")}},
+						Comparator{MapQuery("key2"), EQ, ValueQuery{ToValue("b")}},
+					},
+					Comparator{MapQuery("key1"), LE, ValueQuery{ToValue(1)}},
+				},
+			},
+			want: `[((.key2 == "a" or .key2 == "b") and .key1 <= 1)]`,
+		}, {
+			q:    WalkQuery("key"),
+			want: "..key",
+		}, {
+			q:    FilterQuery{MapQuery("key1"), WalkQuery("key2")},
+			want: ".key1..key2",
+		},
+	}
+	for i, test := range tests {
+		got := test.q.String()
+		if got != test.want {
 			t.Errorf(`Error tests[%d] returns %v; want %v`, i, got, test.want)
 		}
 	}

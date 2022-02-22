@@ -4,11 +4,13 @@ import (
 	"fmt"
 	"regexp"
 	"strconv"
+	"strings"
 )
 
 // Query is an interface that defines the methods to query a node.
 type Query interface {
 	Exec(n Node) ([]Node, error)
+	String() string
 }
 
 // NopQuery is a query that implements no-op Exec method.
@@ -17,6 +19,10 @@ type NopQuery struct{}
 // Exec returns the provided node.
 func (q NopQuery) Exec(n Node) ([]Node, error) {
 	return []Node{n}, nil
+}
+
+func (q NopQuery) String() string {
+	return "."
 }
 
 // ValueQuery is a query that returns the constant value.
@@ -29,17 +35,27 @@ func (q ValueQuery) Exec(n Node) ([]Node, error) {
 	return []Node{q.Node}, nil
 }
 
+func (q ValueQuery) String() string {
+	s, _ := MarshalJSON(q.Node)
+	return string(s)
+}
+
 // MapQuery is a key of the Map that implements methods of the Query.
 type MapQuery string
 
 func (q MapQuery) Exec(n Node) ([]Node, error) {
+	key := string(q)
 	if m := n.Map(); m != nil {
-		return []Node{m.Get(string(q))}, nil
+		return []Node{m.Get(key)}, nil
 	}
 	if a := n.Array(); a != nil {
-		return []Node{a.Get(string(q))}, nil
+		return []Node{a.Get(key)}, nil
 	}
-	return nil, fmt.Errorf(`Cannot index array with string "%s"`, q)
+	return nil, fmt.Errorf("Cannot index array with string %q", key)
+}
+
+func (q MapQuery) String() string {
+	return "." + string(q)
 }
 
 // ArrayQuery is an index of the Array that implements methods of the Query.
@@ -52,12 +68,16 @@ func (q ArrayQuery) Exec(n Node) ([]Node, error) {
 	return nil, fmt.Errorf(`Cannot index array with index %d`, q)
 }
 
+func (q ArrayQuery) String() string {
+	return fmt.Sprintf("[%d]", q)
+}
+
 // ArrayRangeQuery represents a range of the Array that implements methods of the Query.
 type ArrayRangeQuery []int
 
 func (q ArrayRangeQuery) Exec(n Node) ([]Node, error) {
 	if len(q) != 2 {
-		return nil, fmt.Errorf(`Invalid array range %v`, q)
+		return nil, fmt.Errorf(`Invalid array range %s`, q.String())
 	}
 	if a := n.Array(); a != nil {
 		from, to := q[0], q[1]
@@ -71,6 +91,16 @@ func (q ArrayRangeQuery) Exec(n Node) ([]Node, error) {
 	return nil, fmt.Errorf(`Cannot index array with range %d:%d`, q[0], q[1])
 }
 
+func (q ArrayRangeQuery) String() string {
+	ss := make([]string, len(q))
+	for i, r := range q {
+		if r != -1 {
+			ss[i] = strconv.Itoa(r)
+		}
+	}
+	return "[" + strings.Join(ss, ":") + "]"
+}
+
 // SlurpQuery is a special query that works in FilterQuery.
 type SlurpQuery struct{}
 
@@ -79,6 +109,10 @@ type SlurpQuery struct{}
 // all the results into a single node array.
 func (q SlurpQuery) Exec(n Node) ([]Node, error) {
 	return []Node{n}, nil
+}
+
+func (q SlurpQuery) String() string {
+	return " | "
 }
 
 // FilterQuery consists of multiple queries that filter the nodes in order.
@@ -112,6 +146,14 @@ func (qs FilterQuery) Exec(n Node) ([]Node, error) {
 	return rs, nil
 }
 
+func (qs FilterQuery) String() string {
+	ss := make([]string, len(qs))
+	for i, q := range qs {
+		ss[i] = q.String()
+	}
+	return strings.Join(ss, "")
+}
+
 // WalkQuery is a key of each nodes that implements methods of the Query.
 type WalkQuery string
 
@@ -132,16 +174,22 @@ func (q WalkQuery) Exec(root Node) ([]Node, error) {
 	return r, nil
 }
 
+func (q WalkQuery) String() string {
+	return ".." + string(q)
+}
+
 // Selector checks if a node is eligible for selection.
 type Selector interface {
 	Matches(n Node) (bool, error)
+	String() string
 }
 
 // And represents selectors that combines each selector with and.
 type And []Selector
 
-func (ss And) Matches(n Node) (bool, error) {
-	for _, s := range ss {
+// Matches returns true if all selectors returns true.
+func (a And) Matches(n Node) (bool, error) {
+	for _, s := range a {
 		ok, err := s.Matches(n)
 		if err != nil || !ok {
 			return false, err
@@ -150,11 +198,20 @@ func (ss And) Matches(n Node) (bool, error) {
 	return true, nil
 }
 
+func (a And) String() string {
+	ss := make([]string, len(a))
+	for i, s := range a {
+		ss[i] = s.String()
+	}
+	return "(" + strings.Join(ss, " and ") + ")"
+}
+
 // Or represents selectors that combines each selector with or.
 type Or []Selector
 
-func (ss Or) Matches(n Node) (bool, error) {
-	for _, s := range ss {
+// Matches returns true if anyone returns true.
+func (o Or) Matches(n Node) (bool, error) {
+	for _, s := range o {
 		ok, err := s.Matches(n)
 		if err != nil {
 			return false, err
@@ -164,6 +221,14 @@ func (ss Or) Matches(n Node) (bool, error) {
 		}
 	}
 	return false, nil
+}
+
+func (o Or) String() string {
+	ss := make([]string, len(o))
+	for i, s := range o {
+		ss[i] = s.String()
+	}
+	return "(" + strings.Join(ss, " or ") + ")"
 }
 
 // Comparator represents a comparable selector.
@@ -206,6 +271,10 @@ func (c Comparator) Matches(n Node) (bool, error) {
 	return l0.Value().Compare(c.Op, r0.Value()), nil
 }
 
+func (c Comparator) String() string {
+	return fmt.Sprintf("%s %s %s", c.Left, c.Op, c.Right)
+}
+
 // SelectQuery returns nodes that matched by selectors.
 type SelectQuery struct {
 	Selector
@@ -245,6 +314,10 @@ func (q SelectQuery) Exec(n Node) ([]Node, error) {
 		return rs, nil
 	}
 	return nil, nil
+}
+
+func (q SelectQuery) String() string {
+	return "[" + q.Selector.String() + "]"
 }
 
 var (

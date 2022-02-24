@@ -58,6 +58,8 @@ type Node interface {
 	Map() Map
 	// Value returns this node as a Value.
 	Value() Value
+	// Has checks this node has key.
+	Has(key interface{}) bool
 	// Get returns array/map value that matched by the specified key.
 	// The key type allows int or string.
 	Get(key interface{}) Node
@@ -93,24 +95,30 @@ func (n Array) Value() Value {
 	return nil
 }
 
-func (n Array) toIndex(key interface{}) int {
+func (n Array) toIndex(key interface{}) (int, bool) {
 	switch key.(type) {
 	case int:
-		if k := key.(int); k >= 0 && k < len(n) {
-			return k
+		if k := key.(int); k >= 0 {
+			return k, k < len(n)
 		}
 	case string:
 		k, err := strconv.Atoi(key.(string))
-		if err == nil && k >= 0 && k < len(n) {
-			return k
+		if err == nil && k >= 0 {
+			return k, k < len(n)
 		}
 	}
-	return -1
+	return -1, false
+}
+
+// Has checks this node has key.
+func (n Array) Has(key interface{}) bool {
+	_, ok := n.toIndex(key)
+	return ok
 }
 
 // Get returns an array value as Node.
 func (n Array) Get(key interface{}) Node {
-	if i := n.toIndex(key); i != -1 {
+	if i, ok := n.toIndex(key); ok {
 		return n[i]
 	}
 	return nil
@@ -132,16 +140,23 @@ func (n Array) Find(expr string) ([]Node, error) {
 }
 
 // Set sets v to n[key].
-func (n Array) Set(key interface{}, v Node) Array {
-	if i := n.toIndex(key); i != -1 {
-		n[i] = v
+func (n *Array) Set(key interface{}, v Node) *Array {
+	i, ok := n.toIndex(key)
+	if i == -1 {
+		return n
 	}
+	if !ok {
+		a := make([]Node, i+1)
+		copy(a, *n)
+		*n = a
+	}
+	(*n)[i] = v
 	return n
 }
 
 // Delete deletes n[key].
 func (n *Array) Delete(key interface{}) *Array {
-	if i := n.toIndex(key); i != -1 {
+	if i, ok := n.toIndex(key); ok {
 		a := *n
 		*n = append(a[0:i], a[i+1:]...)
 	}
@@ -179,13 +194,30 @@ func (n Map) Value() Value {
 	return nil
 }
 
-// Get returns an array value as Node.
-func (n Map) Get(key interface{}) Node {
+func (n Map) toKey(key interface{}) (string, bool) {
 	switch key.(type) {
 	case int:
-		return n[strconv.Itoa(key.(int))]
+		k := strconv.Itoa(key.(int))
+		_, ok := n[k]
+		return k, ok
 	case string:
-		return n[key.(string)]
+		k := key.(string)
+		_, ok := n[k]
+		return k, ok
+	}
+	return "", false
+}
+
+// Has checks this node has key.
+func (n Map) Has(key interface{}) bool {
+	_, ok := n.toKey(key)
+	return ok
+}
+
+// Get returns an array value as Node.
+func (n Map) Get(key interface{}) Node {
+	if k, ok := n.toKey(key); ok {
+		return n[k]
 	}
 	return nil
 }

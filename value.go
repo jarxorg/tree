@@ -56,6 +56,11 @@ func (n StringValue) Value() Value {
 	return n
 }
 
+// Has returns false.
+func (n StringValue) Has(key interface{}) bool {
+	return false
+}
+
 // Get returns nil.
 func (n StringValue) Get(key interface{}) Node {
 	return nil
@@ -143,6 +148,11 @@ func (n BoolValue) Value() Value {
 	return n
 }
 
+// Has returns false.
+func (n BoolValue) Has(key interface{}) bool {
+	return false
+}
+
 // Get returns nil.
 func (n BoolValue) Get(key interface{}) Node {
 	return nil
@@ -218,6 +228,11 @@ func (n NumberValue) Map() Map {
 // Value returns this.
 func (n NumberValue) Value() Value {
 	return n
+}
+
+// Has returns false.
+func (n NumberValue) Has(key interface{}) bool {
+	return false
 }
 
 // Get returns nil.

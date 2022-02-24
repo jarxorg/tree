@@ -88,15 +88,18 @@ func Test_Node_Get(t *testing.T) {
 	tests := []struct {
 		n    Node
 		key  interface{}
+		has  bool
 		want Node
 	}{
 		{
 			n:    Array{StringValue("a"), StringValue("b")},
 			key:  1,
+			has:  true,
 			want: StringValue("b"),
 		}, {
 			n:    Array{StringValue("a"), StringValue("b")},
 			key:  "1",
+			has:  true,
 			want: StringValue("b"),
 		}, {
 			n:   Array{StringValue("a"), StringValue("b")},
@@ -105,12 +108,18 @@ func Test_Node_Get(t *testing.T) {
 			n:   Array{StringValue("a"), StringValue("b")},
 			key: 2,
 		}, {
+			n:   Array{StringValue("a"), nil},
+			key: 1,
+			has: true,
+		}, {
 			n:    Map{"1": NumberValue(10), "2": NumberValue(20)},
 			key:  "1",
+			has:  true,
 			want: NumberValue(10),
 		}, {
 			n:    Map{"1": NumberValue(10), "2": NumberValue(20)},
 			key:  1,
+			has:  true,
 			want: NumberValue(10),
 		}, {
 			n:   Map{"1": NumberValue(10), "2": NumberValue(20)},
@@ -118,6 +127,10 @@ func Test_Node_Get(t *testing.T) {
 		}, {
 			n:   Map{"1": NumberValue(10), "2": NumberValue(20)},
 			key: "3",
+		}, {
+			n:   Map{"1": NumberValue(10), "2": nil},
+			key: "2",
+			has: true,
 		}, {
 			n: StringValue("str"),
 		}, {
@@ -127,6 +140,9 @@ func Test_Node_Get(t *testing.T) {
 		},
 	}
 	for i, test := range tests {
+		if test.n.Has(test.key) != test.has {
+			t.Errorf("Error tests[%d] has %v; want %v", i, !test.has, test.has)
+		}
 		got := test.n.Get(test.key)
 		if !reflect.DeepEqual(got, test.want) {
 			t.Errorf("Error tests[%d] got %q; want %q", i, got, test.want)
@@ -208,8 +224,8 @@ func Test_Node_Find(t *testing.T) {
 func Test_Array_Set(t *testing.T) {
 	want := Array{NumberValue(1), StringValue("2"), BoolValue(true)}
 
-	got := Array{NumberValue(0), StringValue("1"), BoolValue(false)}
-	got.Set(0, NumberValue(1)).Set("1", StringValue("2")).Set(2, BoolValue(true))
+	got := Array{NumberValue(0), StringValue("1")}
+	got.Set(0, NumberValue(1)).Set("1", StringValue("2")).Set(2, BoolValue(true)).Set(-1, NumberValue(-1))
 
 	if !reflect.DeepEqual(got, want) {
 		t.Errorf("Error got %#v; want %#v", got, want)

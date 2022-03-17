@@ -1,6 +1,7 @@
 package tree
 
 import (
+	"fmt"
 	"sort"
 	"strconv"
 )
@@ -70,10 +71,18 @@ type Node interface {
 	Find(expr string) ([]Node, error)
 }
 
+// EditorNode is an interface that defines the methods to edit this node.
+type EditorNode interface {
+	Node
+	Append(v Node) error
+	Set(key interface{}, v Node) error
+	Delete(key interface{}) error
+}
+
 // Array represents an array of Node.
 type Array []Node
 
-var _ Node = (Array)(nil)
+var _ EditorNode = (*Array)(nil)
 
 // Type returns TypeArray.
 func (n Array) Type() Type {
@@ -139,11 +148,17 @@ func (n Array) Find(expr string) ([]Node, error) {
 	return Find(n, expr)
 }
 
+// Append appends v to *n.
+func (n *Array) Append(v Node) error {
+	*n = append(*n, v)
+	return nil
+}
+
 // Set sets v to n[key].
-func (n *Array) Set(key interface{}, v Node) *Array {
+func (n *Array) Set(key interface{}, v Node) error {
 	i, ok := n.toIndex(key)
 	if i == -1 {
-		return n
+		return fmt.Errorf("Cannot index array with %v", key)
 	}
 	if !ok {
 		a := make([]Node, i+1)
@@ -151,28 +166,26 @@ func (n *Array) Set(key interface{}, v Node) *Array {
 		*n = a
 	}
 	(*n)[i] = v
-	return n
+	return nil
 }
 
 // Delete deletes n[key].
-func (n *Array) Delete(key interface{}) *Array {
-	if i, ok := n.toIndex(key); ok {
+func (n *Array) Delete(key interface{}) error {
+	i, ok := n.toIndex(key)
+	if i == -1 {
+		return fmt.Errorf("Cannot index array with %v", key)
+	}
+	if ok {
 		a := *n
 		*n = append(a[0:i], a[i+1:]...)
 	}
-	return n
-}
-
-// Append appends v to *n.
-func (n *Array) Append(v Node) *Array {
-	*n = append(*n, v)
-	return n
+	return nil
 }
 
 // Map represents a map of Node.
 type Map map[string]Node
 
-var _ Node = (Map)(nil)
+var _ EditorNode = (Map)(nil)
 
 // Type returns TypeMap.
 func (n Map) Type() Type {
@@ -243,26 +256,35 @@ func (n Map) Values() []Node {
 	return values
 }
 
+// Append appends v to *n.
+func (n Map) Append(v Node) error {
+	return fmt.Errorf("Cannot append to map")
+}
+
 // Set sets v to n[key].
-func (n Map) Set(key interface{}, v Node) Map {
+func (n Map) Set(key interface{}, v Node) error {
 	switch key.(type) {
 	case int:
 		n[strconv.Itoa(key.(int))] = v
+		return nil
 	case string:
 		n[key.(string)] = v
+		return nil
 	}
-	return n
+	return fmt.Errorf("Cannot index array with %v", key)
 }
 
 // Delete deletes n[key].
-func (n Map) Delete(key interface{}) Map {
+func (n Map) Delete(key interface{}) error {
 	switch key.(type) {
 	case int:
 		delete(n, strconv.Itoa(key.(int)))
+		return nil
 	case string:
 		delete(n, key.(string))
+		return nil
 	}
-	return n
+	return fmt.Errorf("Cannot index array with %v", key)
 }
 
 // Each calls the callback function for each Map values.

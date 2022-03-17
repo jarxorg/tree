@@ -221,76 +221,177 @@ func Test_Node_Find(t *testing.T) {
 	}
 }
 
-func Test_Array_Set(t *testing.T) {
-	want := Array{NumberValue(1), StringValue("2"), BoolValue(true)}
-
-	got := Array{NumberValue(0), StringValue("1")}
-	got.Set(0, NumberValue(1)).Set("1", StringValue("2")).Set(2, BoolValue(true)).Set(-1, NumberValue(-1))
-
-	if !reflect.DeepEqual(got, want) {
-		t.Errorf("Error got %#v; want %#v", got, want)
+func Test_EditorNode_Append(t *testing.T) {
+	tests := []struct {
+		n      EditorNode
+		values []Node
+		want   EditorNode
+		errstr string
+	}{
+		{
+			n:      &Array{NumberValue(1)},
+			values: []Node{StringValue("2"), BoolValue(true)},
+			want:   &Array{NumberValue(1), StringValue("2"), BoolValue(true)},
+		}, {
+			n:      Map{},
+			values: []Node{StringValue("2")},
+			errstr: "Cannot append to map",
+		},
+	}
+	for i, test := range tests {
+		var err error
+		for _, value := range test.values {
+			err = test.n.Append(value)
+			if err != nil {
+				break
+			}
+		}
+		if test.errstr != "" {
+			if err == nil {
+				t.Fatalf("Fatal tests[%d] returns no error", i)
+			}
+			if err.Error() != test.errstr {
+				t.Errorf(`Error tests[%d] returns error %s; want %s`, i, err.Error(), test.errstr)
+			}
+			continue
+		}
+		if err != nil {
+			t.Fatal(err, i)
+		}
+		got := test.n
+		if !reflect.DeepEqual(got, test.want) {
+			t.Errorf(`Error tests[%d] returns %v; want %v`, i, got, test.want)
+		}
 	}
 }
 
-func Test_Array_Delete(t *testing.T) {
-	want := Array{NumberValue(1)}
-
-	got := Array{NumberValue(1), StringValue("1"), BoolValue(true)}
-	got.Delete(1).Delete("1")
-
-	if !reflect.DeepEqual(got, want) {
-		t.Errorf("Error got %#v; want %#v", got, want)
+func Test_EditorNode_Set(t *testing.T) {
+	tests := []struct {
+		n       EditorNode
+		entries map[interface{}]Node
+		want    EditorNode
+		errstr  string
+	}{
+		{
+			n: &Array{NumberValue(0), StringValue("1")},
+			entries: map[interface{}]Node{
+				0:   NumberValue(1),
+				"1": StringValue("2"),
+				2:   BoolValue(true),
+			},
+			want: &Array{NumberValue(1), StringValue("2"), BoolValue(true)},
+		}, {
+			n:       &Array{},
+			entries: map[interface{}]Node{-2: StringValue("value")},
+			errstr:  "Cannot index array with -2",
+		}, {
+			n: Map{
+				"1": NumberValue(1),
+				"2": StringValue("2"),
+				"3": BoolValue(true),
+			},
+			entries: map[interface{}]Node{
+				"1": NumberValue(10),
+				"4": StringValue("40"),
+				5:   BoolValue(true),
+			},
+			want: Map{
+				"1": NumberValue(10),
+				"2": StringValue("2"),
+				"3": BoolValue(true),
+				"4": StringValue("40"),
+				"5": BoolValue(true),
+			},
+		}, {
+			n:       Map{},
+			entries: map[interface{}]Node{true: StringValue("value")},
+			errstr:  "Cannot index array with true",
+		},
+	}
+	for i, test := range tests {
+		var err error
+		for key, value := range test.entries {
+			err = test.n.Set(key, value)
+			if err != nil {
+				break
+			}
+		}
+		if test.errstr != "" {
+			if err == nil {
+				t.Fatalf("Fatal tests[%d] returns no error", i)
+			}
+			if err.Error() != test.errstr {
+				t.Errorf(`Error tests[%d] returns error %s; want %s`, i, err.Error(), test.errstr)
+			}
+			continue
+		}
+		if err != nil {
+			t.Fatal(err, i)
+		}
+		got := test.n
+		if !reflect.DeepEqual(got, test.want) {
+			t.Errorf(`Error tests[%d] returns %v; want %v`, i, got, test.want)
+		}
 	}
 }
 
-func Test_Array_Append(t *testing.T) {
-	want := Array{NumberValue(1), StringValue("2"), BoolValue(true)}
-
-	got := Array{NumberValue(1)}
-	got.Append(StringValue("2")).Append(BoolValue(true))
-
-	if !reflect.DeepEqual(got, want) {
-		t.Errorf("Error got %#v; want %#v", got, want)
+func Test_EditorNode_Delete(t *testing.T) {
+	tests := []struct {
+		n      EditorNode
+		keys   []interface{}
+		want   EditorNode
+		errstr string
+	}{
+		{
+			n:    &Array{NumberValue(1), StringValue("1"), BoolValue(true)},
+			keys: []interface{}{1, "1"},
+			want: &Array{NumberValue(1)},
+		}, {
+			n:      &Array{},
+			keys:   []interface{}{-1},
+			errstr: "Cannot index array with -1",
+		}, {
+			n: Map{
+				"1": NumberValue(1),
+				"2": StringValue("2"),
+				"3": BoolValue(true),
+				"4": StringValue("4"),
+				"5": BoolValue(true),
+			},
+			keys: []interface{}{"2", "4", 5, 7},
+			want: Map{
+				"1": NumberValue(1),
+				"3": BoolValue(true),
+			},
+		}, {
+			n:      Map{},
+			keys:   []interface{}{true},
+			errstr: "Cannot index array with true",
+		},
 	}
-}
-
-func Test_Map_Set(t *testing.T) {
-	want := Map{
-		"1": NumberValue(10),
-		"2": StringValue("2"),
-		"3": BoolValue(true),
-		"4": StringValue("40"),
-		"5": BoolValue(true),
-	}
-
-	got := Map{
-		"1": NumberValue(1),
-		"2": StringValue("2"),
-		"3": BoolValue(true),
-	}
-	got.Set("1", NumberValue(10)).Set("4", StringValue("40")).Set(5, BoolValue(true))
-
-	if !reflect.DeepEqual(got, want) {
-		t.Errorf("Error got %#v; want %#v", got, want)
-	}
-}
-
-func Test_Map_Delete(t *testing.T) {
-	want := Map{
-		"1": NumberValue(1),
-		"3": BoolValue(true),
-	}
-
-	got := Map{
-		"1": NumberValue(1),
-		"2": StringValue("2"),
-		"3": BoolValue(true),
-		"4": StringValue("4"),
-		"5": BoolValue(true),
-	}
-	got.Delete("2").Delete("4").Delete(5).Delete(7)
-
-	if !reflect.DeepEqual(got, want) {
-		t.Errorf("Error got %#v; want %#v", got, want)
+	for i, test := range tests {
+		var err error
+		for _, key := range test.keys {
+			err = test.n.Delete(key)
+			if err != nil {
+				break
+			}
+		}
+		if test.errstr != "" {
+			if err == nil {
+				t.Fatalf("Fatal tests[%d] returns no error", i)
+			}
+			if err.Error() != test.errstr {
+				t.Errorf(`Error tests[%d] returns error %s; want %s`, i, err.Error(), test.errstr)
+			}
+			continue
+		}
+		if err != nil {
+			t.Fatal(err, i)
+		}
+		got := test.n
+		if !reflect.DeepEqual(got, test.want) {
+			t.Errorf(`Error tests[%d] returns %v; want %v`, i, got, test.want)
+		}
 	}
 }

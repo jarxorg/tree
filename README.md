@@ -178,6 +178,8 @@ Usage:
   tq [flags] [query] ([file...])
 
 Flags:
+  -e value
+    	edit expression
   -h	help for tq
   -i value
     	input format (json or yaml) (default json)
@@ -196,6 +198,15 @@ Examples:
   % echo '{"users":[{"id":1,"name":"one"},{"id":2,"name":"two"}]}' | tq -x -t '{{.id}}: {{.name}}' '.users'
   1: one
   2: two
+
+  % echo '{}' | tq -e '.colors = ["Red", "Green"]' -e '.colors += "Blue"' .
+  {
+    "colors": [
+      "Red",
+      "Green",
+      "Blue"
+    ]
+  }
 ```
 
 ### for jq user

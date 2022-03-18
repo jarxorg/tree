@@ -1,24 +1,9 @@
 package tree
 
 import (
-	"fmt"
-	"io"
 	"reflect"
-	"strings"
 	"testing"
 )
-
-// printToken prints token tree for debug.
-func printToken(w io.Writer, t *token, depth int) {
-	indent := strings.Repeat("\t", depth)
-	fmt.Fprintf(w, "%s{%s} %s\n", indent, t.cmd, t.value)
-	if len(t.children) > 0 {
-		depth++
-		for _, c := range t.children {
-			printToken(w, c, depth)
-		}
-	}
-}
 
 func Test_Query(t *testing.T) {
 	tests := []struct {
@@ -552,6 +537,24 @@ func Test_Edit(t *testing.T) {
 			n:    Array{StringValue("red")},
 			expr: `.0 delete`,
 			want: Array{},
+		}, {
+			n:      Array{},
+			expr:   `..name = "number"`,
+			errstr: "Syntax error: unsupported edit query: ..name",
+		}, {
+			n: Map{
+				"users": Array{
+					Map{"name": StringValue("one"), "class": StringValue("A")},
+					Map{"name": StringValue("two"), "class": StringValue("B")},
+				},
+			},
+			expr: `..users[].class = "A"`,
+			want: Map{
+				"users": Array{
+					Map{"name": StringValue("one"), "class": StringValue("A")},
+					Map{"name": StringValue("two"), "class": StringValue("A")},
+				},
+			},
 		},
 	}
 	for i, test := range tests {
@@ -561,8 +564,9 @@ func Test_Edit(t *testing.T) {
 				t.Fatalf("Fatal tests[%d]: no error; want %s", i, test.errstr)
 			}
 			if err.Error() != test.errstr {
-				t.Fatalf("Error tests[%d]: %s; want %s", i, err.Error(), test.errstr)
+				t.Errorf("Error tests[%d]: %s; want %s", i, err.Error(), test.errstr)
 			}
+			continue
 		}
 		if err != nil {
 			t.Fatalf("Fatal tests[%d]: %+v", i, err)

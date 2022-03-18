@@ -94,19 +94,16 @@ func (q MapQuery) Append(pn *Node, v Node) error {
 	n := *pn
 	key := string(q)
 	if en, ok := (*pn).(EditorNode); ok {
-		var a Array
 		if n.Has(key) {
 			x := n.Get(key)
-			if a = x.Array(); a == nil {
-				return fmt.Errorf("Not array value %v", x)
+			if x != nil {
+				if ex, ok := x.(EditorNode); ok {
+					return ex.Append(v)
+				}
 			}
-			if err := a.Append(v); err != nil {
-				return err
-			}
-		} else {
-			a = Array{v}
+			return fmt.Errorf("Not editable value %v", x)
 		}
-		return en.Set(key, a)
+		return en.Set(key, Array{v})
 	}
 	return fmt.Errorf("Cannot index array with %q", key)
 }
@@ -151,19 +148,16 @@ func (q ArrayQuery) Append(pn *Node, v Node) error {
 	index := int(q)
 	n := *pn
 	if en, ok := (*pn).(EditorNode); ok {
-		var a Array
 		if n.Has(index) {
 			x := n.Get(index)
-			if a = x.Array(); a == nil {
-				return fmt.Errorf("Not array value %v", x)
+			if x != nil {
+				if ex, ok := x.(EditorNode); ok {
+					return ex.Append(v)
+				}
 			}
-			if err := a.Append(v); err != nil {
-				return err
-			}
-		} else {
-			a = Array{v}
+			return fmt.Errorf("Not editable value %v", x)
 		}
-		return en.Set(index, a)
+		return en.Set(index, Array{v})
 	}
 	return fmt.Errorf("Cannot index array with %d", index)
 }

@@ -117,23 +117,11 @@ func walk(n Node, lastKeys []interface{}, fn WalkFunc) error {
 	keys := make([]interface{}, last+1)
 	copy(keys, lastKeys)
 
-	if a := n.Array(); a != nil {
-		for i, v := range a {
-			keys[last] = i
-			if err := walk(v, keys, fn); err != nil {
-				return err
-			}
+	return n.Each(func(key interface{}, v Node) error {
+		if key == nil {
+			return nil
 		}
-		return nil
-	}
-	if m := n.Map(); m != nil {
-		for _, k := range m.Keys() {
-			keys[last] = k
-			if err := walk(m[k], keys, fn); err != nil {
-				return err
-			}
-		}
-		return nil
-	}
-	return nil
+		keys[last] = key
+		return walk(v, keys, fn)
+	})
 }

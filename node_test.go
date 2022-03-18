@@ -42,7 +42,7 @@ func Test_Type(t *testing.T) {
 	}
 	for i, test := range tests {
 		if got := test.is(); got != test.want {
-			t.Errorf(`Error tests[%d] is %v; want %v`, i, got, test.want)
+			t.Errorf(`tests[%d]: got %v; want %v`, i, got, test.want)
 		}
 	}
 }
@@ -70,16 +70,16 @@ func Test_Node(t *testing.T) {
 	for i, test := range tests {
 		n := test.n
 		if tt := n.Type(); tt != test.t {
-			t.Errorf(`Error tests[%d] Type returns %v; want %v`, i, tt, test.t)
+			t.Errorf(`tests[%d]: Type returns %v; want %v`, i, tt, test.t)
 		}
 		if aa := n.Array(); !reflect.DeepEqual(aa, test.a) {
-			t.Errorf(`Error tests[%d] Array returns %v; want %v`, i, aa, test.a)
+			t.Errorf(`tests[%d]: Array returns %v; want %v`, i, aa, test.a)
 		}
 		if mm := n.Map(); !reflect.DeepEqual(mm, test.m) {
-			t.Errorf(`Error tests[%d] Map returns %v; want %v`, i, mm, test.m)
+			t.Errorf(`tests[%d]: Map returns %v; want %v`, i, mm, test.m)
 		}
 		if vv := n.Value(); !reflect.DeepEqual(vv, test.v) {
-			t.Errorf(`Error tests[%d] Value returns %v; want %v`, i, vv, test.v)
+			t.Errorf(`tests[%d]: Value returns %v; want %v`, i, vv, test.v)
 		}
 	}
 }
@@ -141,11 +141,11 @@ func Test_Node_Get(t *testing.T) {
 	}
 	for i, test := range tests {
 		if test.n.Has(test.key) != test.has {
-			t.Errorf("Error tests[%d] has %v; want %v", i, !test.has, test.has)
+			t.Errorf("tests[%d]: has %v; want %v", i, !test.has, test.has)
 		}
 		got := test.n.Get(test.key)
 		if !reflect.DeepEqual(got, test.want) {
-			t.Errorf("Error tests[%d] got %q; want %q", i, got, test.want)
+			t.Errorf("tests[%d]: got %q; want %q", i, got, test.want)
 		}
 	}
 }
@@ -182,14 +182,14 @@ func Test_Node_Each(t *testing.T) {
 			t.Fatal(err)
 		}
 		if !reflect.DeepEqual(got, test.want) {
-			t.Errorf(`Error tests[%d] got %v; want %v`, i, got, test.want)
+			t.Errorf(`tests[%d]: got %v; want %v`, i, got, test.want)
 		}
 		wantErr := fmt.Errorf("test%d", i)
 		gotErr := test.n.Each(func(key interface{}, v Node) error {
 			return wantErr
 		})
 		if wantErr != gotErr {
-			t.Errorf(`Error tests[%d] got error %v; want %v`, i, gotErr, wantErr)
+			t.Errorf(`tests[%d]: got error %v; want %v`, i, gotErr, wantErr)
 		}
 	}
 }
@@ -216,7 +216,7 @@ func Test_Node_Find(t *testing.T) {
 			t.Fatal(err)
 		}
 		if !reflect.DeepEqual(got, test.want) {
-			t.Errorf("Error tests[%d] returns %#v; want %#v", i, got, test.want)
+			t.Errorf("tests[%d]: got %#v; want %#v", i, got, test.want)
 		}
 	}
 }
@@ -235,7 +235,7 @@ func Test_EditorNode_Append(t *testing.T) {
 		}, {
 			n:      Map{},
 			values: []Node{StringValue("2")},
-			errstr: "Cannot append to map",
+			errstr: "cannot append to map",
 		},
 	}
 	for i, test := range tests {
@@ -248,10 +248,10 @@ func Test_EditorNode_Append(t *testing.T) {
 		}
 		if test.errstr != "" {
 			if err == nil {
-				t.Fatalf("Fatal tests[%d] returns no error", i)
+				t.Fatalf("tests[%d]: returns no error", i)
 			}
 			if err.Error() != test.errstr {
-				t.Errorf(`Error tests[%d] returns error %s; want %s`, i, err.Error(), test.errstr)
+				t.Errorf(`tests[%d]: returns error %s; want %s`, i, err.Error(), test.errstr)
 			}
 			continue
 		}
@@ -260,7 +260,7 @@ func Test_EditorNode_Append(t *testing.T) {
 		}
 		got := test.n
 		if !reflect.DeepEqual(got, test.want) {
-			t.Errorf(`Error tests[%d] returns %v; want %v`, i, got, test.want)
+			t.Errorf(`tests[%d]: got %v; want %v`, i, got, test.want)
 		}
 	}
 }
@@ -283,7 +283,7 @@ func Test_EditorNode_Set(t *testing.T) {
 		}, {
 			n:       &Array{},
 			entries: map[interface{}]Node{-2: StringValue("value")},
-			errstr:  "Cannot index array with -2",
+			errstr:  "cannot index array with -2",
 		}, {
 			n: Map{
 				"1": NumberValue(1),
@@ -305,7 +305,7 @@ func Test_EditorNode_Set(t *testing.T) {
 		}, {
 			n:       Map{},
 			entries: map[interface{}]Node{true: StringValue("value")},
-			errstr:  "Cannot index array with true",
+			errstr:  "cannot index array with true",
 		},
 	}
 	for i, test := range tests {
@@ -318,10 +318,10 @@ func Test_EditorNode_Set(t *testing.T) {
 		}
 		if test.errstr != "" {
 			if err == nil {
-				t.Fatalf("Fatal tests[%d] returns no error", i)
+				t.Fatalf("tests[%d]: returns no error", i)
 			}
 			if err.Error() != test.errstr {
-				t.Errorf(`Error tests[%d] returns error %s; want %s`, i, err.Error(), test.errstr)
+				t.Errorf(`tests[%d]: returns error %s; want %s`, i, err.Error(), test.errstr)
 			}
 			continue
 		}
@@ -330,7 +330,7 @@ func Test_EditorNode_Set(t *testing.T) {
 		}
 		got := test.n
 		if !reflect.DeepEqual(got, test.want) {
-			t.Errorf(`Error tests[%d] returns %v; want %v`, i, got, test.want)
+			t.Errorf(`tests[%d]: got %v; want %v`, i, got, test.want)
 		}
 	}
 }
@@ -349,7 +349,7 @@ func Test_EditorNode_Delete(t *testing.T) {
 		}, {
 			n:      &Array{},
 			keys:   []interface{}{-1},
-			errstr: "Cannot index array with -1",
+			errstr: "cannot index array with -1",
 		}, {
 			n: Map{
 				"1": NumberValue(1),
@@ -366,7 +366,7 @@ func Test_EditorNode_Delete(t *testing.T) {
 		}, {
 			n:      Map{},
 			keys:   []interface{}{true},
-			errstr: "Cannot index array with true",
+			errstr: "cannot index array with true",
 		},
 	}
 	for i, test := range tests {
@@ -379,10 +379,10 @@ func Test_EditorNode_Delete(t *testing.T) {
 		}
 		if test.errstr != "" {
 			if err == nil {
-				t.Fatalf("Fatal tests[%d] returns no error", i)
+				t.Fatalf("tests[%d]: returns no error", i)
 			}
 			if err.Error() != test.errstr {
-				t.Errorf(`Error tests[%d] returns error %s; want %s`, i, err.Error(), test.errstr)
+				t.Errorf(`tests[%d]: returns error %s; want %s`, i, err.Error(), test.errstr)
 			}
 			continue
 		}
@@ -391,7 +391,7 @@ func Test_EditorNode_Delete(t *testing.T) {
 		}
 		got := test.n
 		if !reflect.DeepEqual(got, test.want) {
-			t.Errorf(`Error tests[%d] returns %v; want %v`, i, got, test.want)
+			t.Errorf(`tests[%d]: got %v; want %v`, i, got, test.want)
 		}
 	}
 }

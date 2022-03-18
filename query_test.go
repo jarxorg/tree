@@ -23,7 +23,7 @@ func Test_Query(t *testing.T) {
 		}, {
 			q:      MapQuery("key"),
 			n:      ToValue("not map"),
-			errstr: `Cannot index array with "key"`,
+			errstr: `cannot index array with "key"`,
 		}, {
 			q:    ArrayQuery(0),
 			n:    Array{ToValue(1)},
@@ -31,7 +31,7 @@ func Test_Query(t *testing.T) {
 		}, {
 			q:      ArrayQuery(0),
 			n:      ToValue("not array"),
-			errstr: `Cannot index array with 0`,
+			errstr: `cannot index array with 0`,
 		}, {
 			q:    ArrayRangeQuery{0, 2},
 			n:    Array{ToValue(0), ToValue(1), ToValue(2)},
@@ -43,11 +43,11 @@ func Test_Query(t *testing.T) {
 		}, {
 			q:      ArrayRangeQuery{0, 1, 2},
 			n:      Array{},
-			errstr: `Invalid array range [0:1:2]`,
+			errstr: `invalid array range [0:1:2]`,
 		}, {
 			q:      ArrayRangeQuery{0, 1},
 			n:      Map{},
-			errstr: `Cannot index array with range 0:1`,
+			errstr: `cannot index array with range 0:1`,
 		}, {
 			q:    FilterQuery{MapQuery("key"), ArrayQuery(0)},
 			n:    Map{"key": Array{ToValue(1)}},
@@ -55,7 +55,7 @@ func Test_Query(t *testing.T) {
 		}, {
 			q:      FilterQuery{MapQuery("key"), ArrayQuery(0)},
 			n:      Map{"key": ToValue(1)},
-			errstr: `Cannot index array with 0`,
+			errstr: `cannot index array with 0`,
 		}, {
 			q: SelectQuery{And{
 				Comparator{MapQuery("key"), EQ, ValueQuery{ToValue(1)}},
@@ -103,10 +103,10 @@ func Test_Query(t *testing.T) {
 		got, err := test.q.Exec(test.n)
 		if test.errstr != "" {
 			if err == nil {
-				t.Fatalf("Fatal tests[%d] %s returns no error", i, test.q)
+				t.Fatalf("tests[%d]: %s returns no error", i, test.q)
 			}
 			if err.Error() != test.errstr {
-				t.Errorf(`Error tests[%d] %s returns error %s; want %s`, i, test.q, err.Error(), test.errstr)
+				t.Errorf(`tests[%d]: %s returns error %s; want %s`, i, test.q, err.Error(), test.errstr)
 			}
 			continue
 		}
@@ -114,7 +114,7 @@ func Test_Query(t *testing.T) {
 			t.Fatal(err, i)
 		}
 		if !reflect.DeepEqual(got, test.want) {
-			t.Errorf(`Error tests[%d] %s returns %v; want %v`, i, test.q, got, test.want)
+			t.Errorf(`tests[%d]: %s returns %v; want %v`, i, test.q, got, test.want)
 		}
 	}
 }
@@ -167,7 +167,7 @@ func Test_Query_String(t *testing.T) {
 	for i, test := range tests {
 		got := test.q.String()
 		if got != test.want {
-			t.Errorf(`Error tests[%d] returns %v; want %v`, i, got, test.want)
+			t.Errorf(`tests[%d]: returns %v; want %v`, i, got, test.want)
 		}
 	}
 }
@@ -259,7 +259,7 @@ func Test_ParseQuery(t *testing.T) {
 			t.Fatal(err)
 		}
 		if !reflect.DeepEqual(got, test.want) {
-			t.Errorf(`Error tests[%d]: "%s" returns %#v; want %#v`, i, test.expr, got, test.want)
+			t.Errorf(`tests[%d]: "%s" returns %#v; want %#v`, i, test.expr, got, test.want)
 		}
 	}
 }
@@ -271,43 +271,43 @@ func Test_ParseQuery_Errors(t *testing.T) {
 	}{
 		{
 			expr:   `<`,
-			errstr: `Syntax error: invalid token <: "<"`,
+			errstr: `syntax error: invalid token <: "<"`,
 		}, {
 			expr:   `[`,
-			errstr: `Syntax error: no right brackets: "["`,
+			errstr: `syntax error: no right brackets: "["`,
 		}, {
 			expr:   `]`,
-			errstr: `Syntax error: no left bracket: "]"`,
+			errstr: `syntax error: no left bracket: "]"`,
 		}, {
 			expr:   `[a]`,
-			errstr: `Syntax error: invalid array index: "[a]"`,
+			errstr: `syntax error: invalid array index: "[a]"`,
 		}, {
 			expr:   `[a:b]`,
-			errstr: `Syntax error: invalid array range: "[a:b]"`,
+			errstr: `syntax error: invalid array range: "[a:b]"`,
 		}, {
 			expr:   `[0:a]`,
-			errstr: `Syntax error: invalid array range: "[0:a]"`,
+			errstr: `syntax error: invalid array range: "[0:a]"`,
 		}, {
 			expr:   `[[l] == .r]`,
-			errstr: `Syntax error: invalid array index: "[[l] == .r]"`,
+			errstr: `syntax error: invalid array index: "[[l] == .r]"`,
 		}, {
 			expr:   `[.l == [r]]`,
-			errstr: `Syntax error: invalid array index: "[.l == [r]]"`,
+			errstr: `syntax error: invalid array index: "[.l == [r]]"`,
 		}, {
 			expr:   `.a[a]`,
-			errstr: `Syntax error: invalid array index: ".a[a]"`,
+			errstr: `syntax error: invalid array index: ".a[a]"`,
 		},
 	}
 	for i, test := range tests {
 		got, err := ParseQuery(test.expr)
 		if got != nil {
-			t.Errorf(`Error tests[%d] returns not nil %#v`, i, got)
+			t.Errorf(`tests[%d]: returns not nil %#v`, i, got)
 		}
 		if err == nil {
-			t.Fatalf(`Error tests[%d] returns no error`, i)
+			t.Fatalf(`tests[%d]: returns no error`, i)
 		}
 		if err.Error() != test.errstr {
-			t.Errorf(`Error tests[%d] returns error %s; want %s`, i, err.Error(), test.errstr)
+			t.Errorf(`tests[%d]: returns error %s; want %s`, i, err.Error(), test.errstr)
 		}
 	}
 }
@@ -421,10 +421,10 @@ func Test_Find(t *testing.T) {
 	for i, test := range tests {
 		got, err := Find(n, test.expr)
 		if err != nil {
-			t.Fatalf("Fatal tests[%d]: %+v", i, err)
+			t.Fatalf("tests[%d]: %+v", i, err)
 		}
 		if !reflect.DeepEqual(got, test.want) {
-			t.Errorf("Error tests[%d] returns %#v; want %#v", i, got, test.want)
+			t.Errorf("tests[%d]: returns %#v; want %#v", i, got, test.want)
 		}
 	}
 }
@@ -444,7 +444,7 @@ func Test_holdArray(t *testing.T) {
 	}
 	holdArray(&got)
 	if !reflect.DeepEqual(got, want) {
-		t.Errorf("Error got %#v; want %#v", got, want)
+		t.Errorf("got %#v; want %#v", got, want)
 	}
 }
 
@@ -463,7 +463,7 @@ func Test_unholdArray(t *testing.T) {
 	}
 	unholdArray(&got)
 	if !reflect.DeepEqual(got, want) {
-		t.Errorf("Error got %#v; want %#v", got, want)
+		t.Errorf("got %#v; want %#v", got, want)
 	}
 }
 
@@ -540,7 +540,7 @@ func Test_Edit(t *testing.T) {
 		}, {
 			n:      Array{},
 			expr:   `..name = "number"`,
-			errstr: "Syntax error: unsupported edit query: ..name",
+			errstr: "syntax error: unsupported edit query: ..name",
 		}, {
 			n: Map{
 				"users": Array{
@@ -561,19 +561,19 @@ func Test_Edit(t *testing.T) {
 		err := Edit(&(test.n), test.expr)
 		if test.errstr != "" {
 			if err == nil {
-				t.Fatalf("Fatal tests[%d]: no error; want %s", i, test.errstr)
+				t.Fatalf("tests[%d]: no error; want %s", i, test.errstr)
 			}
 			if err.Error() != test.errstr {
-				t.Errorf("Error tests[%d]: %s; want %s", i, err.Error(), test.errstr)
+				t.Errorf("tests[%d]: %s; want %s", i, err.Error(), test.errstr)
 			}
 			continue
 		}
 		if err != nil {
-			t.Fatalf("Fatal tests[%d]: %+v", i, err)
+			t.Fatalf("tests[%d]: %+v", i, err)
 		}
 		got := test.n
 		if !reflect.DeepEqual(got, test.want) {
-			t.Errorf("Error tests[%d] returns %#v; want %#v", i, got, test.want)
+			t.Errorf("tests[%d]: returns %#v; want %#v", i, got, test.want)
 		}
 	}
 }

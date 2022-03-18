@@ -44,11 +44,11 @@ func (q NopQuery) Append(pn *Node, v Node) error {
 	if en, ok := (*pn).(EditorNode); ok {
 		return en.Append(v)
 	}
-	return fmt.Errorf("Cannot append to %v", *pn)
+	return fmt.Errorf("cannot append to %v", *pn)
 }
 
 func (q NopQuery) Delete(pn *Node) error {
-	return fmt.Errorf("Unsuppoted to delete %v", *pn)
+	return fmt.Errorf("unsuppoted to delete %v", *pn)
 }
 
 // ValueQuery is a query that returns the constant value.
@@ -74,7 +74,7 @@ var _ EditorQuery = (MapQuery)("")
 func (q MapQuery) Exec(n Node) ([]Node, error) {
 	key := string(q)
 	if n.Type().IsValue() {
-		return nil, fmt.Errorf("Cannot index array with %q", key)
+		return nil, fmt.Errorf("cannot index array with %q", key)
 	}
 	if n.Has(key) {
 		return []Node{n.Get(key)}, nil
@@ -87,7 +87,7 @@ func (q MapQuery) Set(pn *Node, v Node) error {
 	if en, ok := (*pn).(EditorNode); ok {
 		return en.Set(key, v)
 	}
-	return fmt.Errorf("Cannot index array with %q", key)
+	return fmt.Errorf("cannot index array with %q", key)
 }
 
 func (q MapQuery) Append(pn *Node, v Node) error {
@@ -101,11 +101,11 @@ func (q MapQuery) Append(pn *Node, v Node) error {
 					return ex.Append(v)
 				}
 			}
-			return fmt.Errorf("Not editable value %v", x)
+			return fmt.Errorf("not editable value %v", x)
 		}
 		return en.Set(key, Array{v})
 	}
-	return fmt.Errorf("Cannot index array with %q", key)
+	return fmt.Errorf("cannot index array with %q", key)
 }
 
 func (q MapQuery) Delete(pn *Node) error {
@@ -113,7 +113,7 @@ func (q MapQuery) Delete(pn *Node) error {
 	if en, ok := (*pn).(EditorNode); ok {
 		return en.Delete(key)
 	}
-	return fmt.Errorf("Cannot index array with %q", key)
+	return fmt.Errorf("cannot index array with %q", key)
 }
 
 func (q MapQuery) String() string {
@@ -133,7 +133,7 @@ func (q ArrayQuery) Exec(n Node) ([]Node, error) {
 		}
 		return nil, nil
 	}
-	return nil, fmt.Errorf("Cannot index array with %d", q)
+	return nil, fmt.Errorf("cannot index array with %d", q)
 }
 
 func (q ArrayQuery) Set(pn *Node, v Node) error {
@@ -141,7 +141,7 @@ func (q ArrayQuery) Set(pn *Node, v Node) error {
 	if en, ok := (*pn).(EditorNode); ok {
 		return en.Set(index, v)
 	}
-	return fmt.Errorf(`Cannot index array with %d`, index)
+	return fmt.Errorf("cannot index array with %d", index)
 }
 
 func (q ArrayQuery) Append(pn *Node, v Node) error {
@@ -155,11 +155,11 @@ func (q ArrayQuery) Append(pn *Node, v Node) error {
 					return ex.Append(v)
 				}
 			}
-			return fmt.Errorf("Not editable value %v", x)
+			return fmt.Errorf("not editable value %v", x)
 		}
 		return en.Set(index, Array{v})
 	}
-	return fmt.Errorf("Cannot index array with %d", index)
+	return fmt.Errorf("cannot index array with %d", index)
 }
 
 func (q ArrayQuery) Delete(pn *Node) error {
@@ -167,7 +167,7 @@ func (q ArrayQuery) Delete(pn *Node) error {
 	if en, ok := (*pn).(EditorNode); ok {
 		return en.Delete(index)
 	}
-	return fmt.Errorf("Cannot index array with %d", index)
+	return fmt.Errorf("cannot index array with %d", index)
 }
 
 func (q ArrayQuery) String() string {
@@ -179,7 +179,7 @@ type ArrayRangeQuery []int
 
 func (q ArrayRangeQuery) Exec(n Node) ([]Node, error) {
 	if len(q) != 2 {
-		return nil, fmt.Errorf(`Invalid array range %s`, q)
+		return nil, fmt.Errorf("invalid array range %s", q)
 	}
 	if a := n.Array(); a != nil {
 		from, to := q[0], q[1]
@@ -190,7 +190,7 @@ func (q ArrayRangeQuery) Exec(n Node) ([]Node, error) {
 		}
 		return a[from:to], nil
 	}
-	return nil, fmt.Errorf(`Cannot index array with range %d:%d`, q[0], q[1])
+	return nil, fmt.Errorf("cannot index array with range %d:%d", q[0], q[1])
 }
 
 func (q ArrayRangeQuery) String() string {
@@ -404,7 +404,7 @@ func (c Comparator) Matches(n Node) (bool, error) {
 	case 1:
 		l0 = l[0]
 	default:
-		return false, fmt.Errorf("%#v returns no single value %+v", c.Left, l)
+		return false, fmt.Errorf("%q returns no single value %+v", c.Left, l)
 	}
 	switch len(r) {
 	case 0:
@@ -412,7 +412,7 @@ func (c Comparator) Matches(n Node) (bool, error) {
 	case 1:
 		r0 = r[0]
 	default:
-		return false, fmt.Errorf("%#v returns no single value %+v", c.Right, r)
+		return false, fmt.Errorf("%q returns no single value %+v", c.Right, r)
 	}
 	if l0 == nil || r0 == nil {
 		return (l0 == nil && r0 == nil), nil
@@ -547,7 +547,7 @@ func tokenizeQuery(expr string) (*token, error) {
 		switch m[2] {
 		case "]", ")":
 			if (m[2] == "]" && current.cmd != "[") || (m[2] == ")" && current.cmd != "(") {
-				return nil, fmt.Errorf(`Syntax error: no left bracket: "%s"`, expr)
+				return nil, fmt.Errorf("syntax error: no left bracket: %q", expr)
 			}
 			current = current.parent
 		case "[", "(":
@@ -558,7 +558,7 @@ func tokenizeQuery(expr string) (*token, error) {
 		}
 	}
 	if current.parent != nil {
-		return nil, fmt.Errorf(`Syntax error: no right brackets: "%s"`, expr)
+		return nil, fmt.Errorf("syntax error: no right brackets: %q", expr)
 	}
 	return current, nil
 }
@@ -590,7 +590,7 @@ func tokenToQuery(t *token, expr string) (Query, error) {
 		if child == 1 {
 			i, err := strconv.Atoi(t.children[0].value)
 			if err != nil {
-				return nil, fmt.Errorf(`Syntax error: invalid array index: "%s"`, expr)
+				return nil, fmt.Errorf("syntax error: invalid array index: %q", expr)
 			}
 			return ArrayQuery(i), nil
 		}
@@ -604,7 +604,7 @@ func tokenToQuery(t *token, expr string) (Query, error) {
 		return SelectQuery{selector}, nil
 	}
 	if child == 0 {
-		return nil, fmt.Errorf(`Syntax error: invalid token %s: "%s"`, t.cmd, expr)
+		return nil, fmt.Errorf("syntax error: invalid token %s: %q", t.cmd, expr)
 	}
 	if child == 1 {
 		return tokenToQuery(t.children[0], expr)
@@ -627,14 +627,14 @@ func tokensToArrayRangeQuery(ts []*token, i int, expr string) (Query, error) {
 		var err error
 		from, err = strconv.Atoi(ts[j].value)
 		if err != nil {
-			return nil, fmt.Errorf(`Syntax error: invalid array range: %q`, expr)
+			return nil, fmt.Errorf("syntax error: invalid array range: %q", expr)
 		}
 	}
 	if j := i + 1; j < len(ts) {
 		var err error
 		to, err = strconv.Atoi(ts[j].value)
 		if err != nil {
-			return nil, fmt.Errorf(`Syntax error: invalid array range: %q`, expr)
+			return nil, fmt.Errorf("syntax error: invalid array range: %q", expr)
 		}
 	}
 	return ArrayRangeQuery{from, to}, nil
@@ -648,7 +648,7 @@ func tokensToSelector(ts []*token, expr string) (Selector, error) {
 		switch t.cmd {
 		case "and", "or":
 			if andOr != "" && andOr != t.cmd {
-				return nil, fmt.Errorf(`Syntax error: mixed and|or: %q`, expr)
+				return nil, fmt.Errorf("syntax error: mixed and|or: %q", expr)
 			}
 			andOr = t.cmd
 			groups = append(groups, ts[off:i])
@@ -664,6 +664,7 @@ func tokensToSelector(ts []*token, expr string) (Selector, error) {
 	var ss []Selector
 	for _, group := range groups {
 		op := -1
+	GROUP:
 		for i, t := range group {
 			if t.cmd == "(" {
 				sss, err := tokensToSelector(t.children, expr)
@@ -676,7 +677,7 @@ func tokensToSelector(ts []*token, expr string) (Selector, error) {
 			switch Operator(t.cmd) {
 			case EQ, GT, GE, LT, LE:
 				op = i
-				break
+				break GROUP
 			}
 		}
 		if op == -1 {
@@ -773,7 +774,7 @@ var editRegexp = regexp.MustCompile(`(.+) (=|\+=|set|append|add|delete|del) ?(.*
 func Edit(pn *Node, expr string) error {
 	ms := editRegexp.FindStringSubmatch(expr)
 	if len(ms) != 4 {
-		return fmt.Errorf("Syntax error: invalid edit expression %q", expr)
+		return fmt.Errorf("syntax error: invalid edit expression %q", expr)
 	}
 	left, op, right := ms[1], ms[2], ms[3]
 
@@ -797,13 +798,13 @@ func Edit(pn *Node, expr string) error {
 }
 
 func editQuery(pn *Node, q Query, op string, v Node) error {
-	switch q.(type) {
+	switch tq := q.(type) {
 	case FilterQuery:
-		return execForEdit(pn, q.(FilterQuery), op, v)
+		return execForEdit(pn, tq, op, v)
 	case EditorQuery:
-		return execEdit(pn, q.(EditorQuery), op, v)
+		return execEdit(pn, tq, op, v)
 	}
-	return fmt.Errorf("Syntax error: unsupported edit query: %s", q)
+	return fmt.Errorf("syntax error: unsupported edit query: %s", q)
 }
 
 func execForEdit(pn *Node, fq FilterQuery, op string, v Node) error {
@@ -824,7 +825,7 @@ func execForEdit(pn *Node, fq FilterQuery, op string, v Node) error {
 	q := fq[l-1]
 	for _, n := range nn {
 		if n == nil {
-			return fmt.Errorf("Runtime error: nil")
+			return fmt.Errorf("runtime error: nil")
 		}
 		if err := editQuery(&n, q, op, v); err != nil {
 			return err
@@ -842,5 +843,5 @@ func execEdit(pn *Node, eq EditorQuery, op string, v Node) error {
 	case "+=", "append":
 		return eq.Append(pn, v)
 	}
-	return fmt.Errorf("Syntax error: unsupported edit operation %q", op)
+	return fmt.Errorf("syntax error: unsupported edit operation %q", op)
 }

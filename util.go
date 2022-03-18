@@ -11,25 +11,25 @@ func ToValue(v interface{}) Node {
 	if v == nil {
 		return nil
 	}
-	switch v.(type) {
+	switch tv := v.(type) {
 	case string:
-		return StringValue(v.(string))
+		return StringValue(tv)
 	case bool:
-		return BoolValue(v.(bool))
+		return BoolValue(tv)
 	case int:
-		return NumberValue(int64(v.(int)))
+		return NumberValue(int64(tv))
 	case int64:
-		return NumberValue(v.(int64))
+		return NumberValue(tv)
 	case int32:
-		return NumberValue(int64(v.(int32)))
+		return NumberValue(int64(tv))
 	case float64:
-		return NumberValue(v.(float64))
+		return NumberValue(tv)
 	case float32:
-		return NumberValue(float64(v.(float32)))
+		return NumberValue(float64(tv))
 	case uint64:
-		return NumberValue(float64(v.(uint64)))
+		return NumberValue(float64(tv))
 	case uint32:
-		return NumberValue(float64(v.(uint32)))
+		return NumberValue(float64(tv))
 	case Node:
 		return v.(Node)
 	}
@@ -60,30 +60,27 @@ func ToNode(v interface{}) Node {
 	if v == nil {
 		return nil
 	}
-	switch v.(type) {
+	switch tv := v.(type) {
 	case Node:
-		return v.(Node)
+		return tv
 	case []interface{}:
-		a := v.([]interface{})
-		aa := make(Array, len(a))
-		for i, vv := range a {
-			aa[i] = ToNode(vv)
+		a := make(Array, len(tv))
+		for i, vv := range tv {
+			a[i] = ToNode(vv)
 		}
-		return aa
+		return a
 	case map[string]interface{}:
-		m := v.(map[string]interface{})
-		mm := Map{}
-		for k := range m {
-			mm[k] = ToNode(m[k])
+		m := Map{}
+		for k := range tv {
+			m[k] = ToNode(tv[k])
 		}
-		return mm
+		return m
 	case map[interface{}]interface{}:
-		m := v.(map[interface{}]interface{})
-		mm := Map{}
-		for k := range m {
-			mm[fmt.Sprintf("%v", k)] = ToNode(m[k])
+		m := Map{}
+		for k := range tv {
+			m[fmt.Sprintf("%v", k)] = ToNode(tv[k])
 		}
-		return mm
+		return m
 	}
 	return ToValue(v)
 }

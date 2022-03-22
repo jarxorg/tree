@@ -171,6 +171,8 @@ tq is a portable command-line JSON/YAML processor.
 go install github.com/jarxorg/tree/cmd/tq@latest
 ```
 
+Using Homebrew
+
 ```sh
 brew tap jarxorg/tree
 brew install jarxorg/tree/tq

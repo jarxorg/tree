@@ -35,6 +35,6 @@ brews:
     token: "{{ .Env.HOMEBREW_TAP_GITHUB_TOKEN }}"
   folder: Formula
   homepage: https://github.com/jarxorg/tree#tq
-  description:
+  description: tq is a portable command-line JSON/YAML processor.
   test: |
     system "#{bin}/tq --help"

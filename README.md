@@ -161,12 +161,19 @@ Tree may works on other parsers those has compatible with "encoding/json" or "go
 }
 ```
 
-## tq - Command line tool
+## tq
+
+tq is a portable command-line JSON/YAML processor.
 
 ### Installation
 
 ```sh
 go install github.com/jarxorg/tree/cmd/tq@latest
+```
+
+```sh
+brew tap jarxorg/tree
+brew install jarxorg/tree/tq
 ```
 
 ### Usage

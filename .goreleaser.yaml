@@ -27,3 +27,13 @@ changelog:
     exclude:
       - '^docs:'
       - '^test:'
+brews:
+- tap:
+    owner: jarxorg
+    name: homebrew-tree
+    token: "{{ .Env.HOMEBREW_TAP_GITHUB_TOKEN }}"
+  folder: Formula
+  homepage: https://github.com/jarxorg/tree#tq
+  description:
+  test: |
+    system "#{bin}/tq --help"

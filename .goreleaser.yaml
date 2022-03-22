@@ -28,7 +28,8 @@ changelog:
       - '^docs:'
       - '^test:'
 brews:
-- tap:
+- name: tq
+  tap:
     owner: jarxorg
     name: homebrew-tree
     token: "{{ .Env.HOMEBREW_TAP_GITHUB_TOKEN }}"

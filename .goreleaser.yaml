@@ -2,7 +2,8 @@ before:
   hooks:
     - go mod tidy
 builds:
-  - main: ./cmd/tq/main.go
+  - main: ./cmd/tq
+    binary: tq
     env:
       - CGO_ENABLED=0
     goos:

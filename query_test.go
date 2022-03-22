@@ -384,6 +384,12 @@ func Test_Find(t *testing.T) {
 			expr: `..book[0]`,
 			want: []Node{n.Get("store").Get("book").Get(0)},
 		}, {
+			expr: `..book[0:2].title`,
+			want: []Node{StringValue("Sayings of the Century"), StringValue("Sword of Honour")},
+		}, {
+			expr: `..book[0:2] | [0].title`,
+			want: []Node{StringValue("Sayings of the Century")},
+		}, {
 			expr: `.store.book.0`,
 			want: []Node{n.Get("store").Get("book").Get(0)},
 		}, {
@@ -398,6 +404,9 @@ func Test_Find(t *testing.T) {
 		}, {
 			expr: `.store.book[1:].price`,
 			want: ToNodeValues(12.99, 8.99, 22.99),
+		}, {
+			expr: `.store.book[:1].price`,
+			want: ToNodeValues(8.95),
 		}, {
 			expr: `.store.book[].author`,
 			want: ToNodeValues("Nigel Rees", "Evelyn Waugh", "Herman Melville", "J. R. R. Tolkien"),
@@ -494,6 +503,26 @@ func Test_Edit(t *testing.T) {
 				},
 			},
 		}, {
+			n:      StringValue("str"),
+			expr:   `.key = {}`,
+			errstr: `cannot index array with "key"`,
+		}, {
+			n:      Map{"key": StringValue("str")},
+			expr:   `. += {}`,
+			errstr: "cannot append to .",
+		}, {
+			n:      StringValue("str"),
+			expr:   `. += {}`,
+			errstr: "cannot append to .",
+		}, {
+			n:      Map{"key": StringValue("str")},
+			expr:   `.key += {}`,
+			errstr: `cannot append to "key"`,
+		}, {
+			n:      StringValue("str"),
+			expr:   `.key += {}`,
+			errstr: `cannot append to "key"`,
+		}, {
 			n:    Array{},
 			expr: `[0] = "red"`,
 			want: Array{StringValue("red")},
@@ -501,6 +530,10 @@ func Test_Edit(t *testing.T) {
 			n:    Array{},
 			expr: `[0][1] = "red"`,
 			want: Array{Array{nil, StringValue("red")}},
+		}, {
+			n:      StringValue("str"),
+			expr:   `[0] = "red"`,
+			errstr: `cannot index array with 0`,
 		}, {
 			n:    Array{},
 			expr: `.0 = "red"`,
@@ -522,6 +555,22 @@ func Test_Edit(t *testing.T) {
 			expr: `.colors += "blue"`,
 			want: Map{"colors": Array{StringValue("red"), StringValue("green"), StringValue("blue")}},
 		}, {
+			n:    Array{Array{StringValue("red")}},
+			expr: `[0] += "blue"`,
+			want: Array{Array{StringValue("red"), StringValue("blue")}},
+		}, {
+			n:    Array{Array{StringValue("red")}},
+			expr: `[2] += "blue"`,
+			want: Array{Array{StringValue("red")}, nil, Array{StringValue("blue")}},
+		}, {
+			n:      Array{StringValue("red")},
+			expr:   `[0] += "blue"`,
+			errstr: `cannot append to array with 0`,
+		}, {
+			n:      StringValue("red"),
+			expr:   `[0] += "blue"`,
+			errstr: `cannot append to array with 0`,
+		}, {
 			n:    Array{},
 			expr: `. += "red"`,
 			want: Array{StringValue("red")},
@@ -538,6 +587,18 @@ func Test_Edit(t *testing.T) {
 			expr: `.0 delete`,
 			want: Array{},
 		}, {
+			n:      Map{},
+			expr:   `. delete`,
+			errstr: "cannot delete .",
+		}, {
+			n:      StringValue("str"),
+			expr:   `.key delete`,
+			errstr: `cannot delete "key"`,
+		}, {
+			n:      StringValue("str"),
+			expr:   `[0] delete`,
+			errstr: `cannot delete array with 0`,
+		}, {
 			n:      Array{},
 			expr:   `..name = "number"`,
 			errstr: "syntax error: unsupported edit query: ..name",
@@ -553,6 +614,18 @@ func Test_Edit(t *testing.T) {
 				"users": Array{
 					Map{"name": StringValue("one"), "class": StringValue("A")},
 					Map{"name": StringValue("two"), "class": StringValue("A")},
+				},
+			},
+		}, {
+			n: Map{
+				"users": Array{
+					Map{"name": StringValue("one"), "class": StringValue("A")},
+				},
+			},
+			expr: `.users[] | [0].name = "ONE"`,
+			want: Map{
+				"users": Array{
+					Map{"name": StringValue("ONE"), "class": StringValue("A")},
 				},
 			},
 		},

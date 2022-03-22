@@ -42,13 +42,15 @@ func (q NopQuery) Set(pn *Node, v Node) error {
 
 func (q NopQuery) Append(pn *Node, v Node) error {
 	if en, ok := (*pn).(EditorNode); ok {
-		return en.Append(v)
+		if err := en.Append(v); err == nil {
+			return nil
+		}
 	}
-	return fmt.Errorf("cannot append to %v", *pn)
+	return fmt.Errorf("cannot append to %s", ".")
 }
 
 func (q NopQuery) Delete(pn *Node) error {
-	return fmt.Errorf("unsuppoted to delete %v", *pn)
+	return fmt.Errorf("cannot delete %s", ".")
 }
 
 // ValueQuery is a query that returns the constant value.
@@ -98,22 +100,26 @@ func (q MapQuery) Append(pn *Node, v Node) error {
 			x := n.Get(key)
 			if x != nil {
 				if ex, ok := x.(EditorNode); ok {
-					return ex.Append(v)
+					if err := ex.Append(v); err == nil {
+						return nil
+					}
 				}
 			}
-			return fmt.Errorf("not editable value %v", x)
+			return fmt.Errorf("cannot append to %q", key)
 		}
 		return en.Set(key, Array{v})
 	}
-	return fmt.Errorf("cannot index array with %q", key)
+	return fmt.Errorf("cannot append to %q", key)
 }
 
 func (q MapQuery) Delete(pn *Node) error {
 	key := string(q)
 	if en, ok := (*pn).(EditorNode); ok {
-		return en.Delete(key)
+		if err := en.Delete(key); err == nil {
+			return nil
+		}
 	}
-	return fmt.Errorf("cannot index array with %q", key)
+	return fmt.Errorf("cannot delete %q", key)
 }
 
 func (q MapQuery) String() string {
@@ -152,22 +158,26 @@ func (q ArrayQuery) Append(pn *Node, v Node) error {
 			x := n.Get(index)
 			if x != nil {
 				if ex, ok := x.(EditorNode); ok {
-					return ex.Append(v)
+					if err := ex.Append(v); err == nil {
+						return nil
+					}
 				}
 			}
-			return fmt.Errorf("not editable value %v", x)
+			return fmt.Errorf("cannot append to array with %d", index)
 		}
 		return en.Set(index, Array{v})
 	}
-	return fmt.Errorf("cannot index array with %d", index)
+	return fmt.Errorf("cannot append to array with %d", index)
 }
 
 func (q ArrayQuery) Delete(pn *Node) error {
 	index := int(q)
 	if en, ok := (*pn).(EditorNode); ok {
-		return en.Delete(index)
+		if err := en.Delete(index); err == nil {
+			return nil
+		}
 	}
-	return fmt.Errorf("cannot index array with %d", index)
+	return fmt.Errorf("cannot delete array with %d", index)
 }
 
 func (q ArrayQuery) String() string {

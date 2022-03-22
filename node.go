@@ -11,7 +11,7 @@ type Type int
 
 // These variables are the Node types.
 const (
-	TypeArray Type = 1 << (32 - 1 - iota)
+	TypeArray Type = iota
 	TypeMap
 	TypeValue
 	TypeStringValue = TypeValue | iota

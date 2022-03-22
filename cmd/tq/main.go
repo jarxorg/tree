@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"strings"
 	"text/template"
 
 	"github.com/jarxorg/tree"
@@ -24,6 +25,15 @@ const (
   % echo '{"users":[{"id":1,"name":"one"},{"id":2,"name":"two"}]}' | tq -x -t '{{.id}}: {{.name}}' '.users'
   1: one
   2: two
+  
+  % echo '{}' | tq -e '.colors = ["red", "green"]' -e '.colors += "blue"' .
+  {
+    "colors": [
+      "red",
+      "green",
+      "blue"
+    ]
+  }
 `
 )
 
@@ -45,25 +55,38 @@ func (f *format) Set(value string) error {
 	return fmt.Errorf("unknown format")
 }
 
+type stringList []string
+
+func (l *stringList) String() string {
+	return strings.Join(*l, ",")
+}
+
+func (l *stringList) Set(value string) error {
+	*l = append(*l, value)
+	return nil
+}
+
 var (
 	isHelp       bool
-	inputFormat  = format("json")
-	outputFormat = format("json")
 	isExpand     bool
 	isSlurp      bool
 	isRaw        bool
 	tmplText     string
 	tmpl         *template.Template
+	inputFormat  = format("json")
+	outputFormat = format("json")
+	editExprs    stringList
 )
 
 func init() {
 	flag.BoolVar(&isHelp, "h", false, "help for "+cmd)
-	flag.Var(&inputFormat, "i", `input format (json or yaml)`)
-	flag.Var(&outputFormat, "o", `output format (json or yaml)`)
 	flag.BoolVar(&isExpand, "x", false, "expand results")
 	flag.BoolVar(&isSlurp, "s", false, "slurp all results into an array")
 	flag.BoolVar(&isRaw, "r", false, "output raw strings")
 	flag.StringVar(&tmplText, "t", "", "golang text/template string (ignore -o flag)")
+	flag.Var(&inputFormat, "i", "input format (json or yaml)")
+	flag.Var(&outputFormat, "o", "output format (json or yaml)")
+	flag.Var(&editExprs, "e", "edit expression")
 
 	flag.Usage = func() {
 		fmt.Fprintf(os.Stderr, "%s\n\nUsage:\n  %s\n\n", desc, usage)
@@ -75,7 +98,7 @@ func init() {
 
 func main() {
 	flag.Parse()
-	if isHelp || flag.Arg(0) == "" {
+	if isHelp || (flag.Arg(0) == "" && len(editExprs) == 0) {
 		flag.Usage()
 		return
 	}
@@ -98,7 +121,10 @@ func run() error {
 		}
 	}
 
-	fargs := flag.Args()[1:]
+	var fargs []string
+	if args := flag.Args(); len(args) > 1 {
+		fargs = args[1:]
+	}
 	if len(fargs) == 0 && term.IsTerminal(0) {
 		flag.Usage()
 		return nil
@@ -196,7 +222,16 @@ func evaluateYAML(in io.Reader) error {
 }
 
 func evaluate(node tree.Node) error {
-	rs, err := tree.Find(node, flag.Arg(0))
+	for _, expr := range editExprs {
+		if err := tree.Edit(&node, expr); err != nil {
+			return err
+		}
+	}
+	expr := flag.Arg(0)
+	if expr == "" {
+		expr = "."
+	}
+	rs, err := tree.Find(node, expr)
 	if err != nil {
 		return err
 	}

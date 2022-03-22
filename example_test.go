@@ -133,7 +133,7 @@ func ExampleFind() {
 		"Colors": tree.ToArrayValues("Crimson", "Red", "Ruby", "Maroon"),
 	}
 
-	rs, err := tree.Find(group, ".Colors[1]")
+	rs, err := group.Find(".Colors[1]")
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -143,4 +143,21 @@ func ExampleFind() {
 
 	// Output:
 	// "Red"
+}
+
+func ExampleEdit() {
+	var group tree.Node = tree.Map{
+		"ID":     tree.ToValue(1),
+		"Name":   tree.ToValue("Reds"),
+		"Colors": tree.ToArrayValues("Crimson", "Red", "Ruby", "Maroon"),
+	}
+
+	err := tree.Edit(&group, ".Colors += \"Pink\"")
+	if err != nil {
+		log.Fatal(err)
+	}
+	fmt.Printf("%+v\n", group)
+
+	// Output:
+	// map[Colors:[Crimson Red Ruby Maroon Pink] ID:1 Name:Reds]
 }

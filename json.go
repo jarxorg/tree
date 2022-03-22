@@ -17,16 +17,15 @@ func DecodeJSON(dec *json.Decoder) (Node, error) {
 	if err != nil || t == nil {
 		return nil, err
 	}
-	switch t.(type) {
+	switch tt := t.(type) {
 	case string:
-		return StringValue(t.(string)), nil
+		return StringValue(tt), nil
 	case float64:
-		return NumberValue(t.(float64)), nil
+		return NumberValue(tt), nil
 	case bool:
-		return BoolValue(t.(bool)), nil
+		return BoolValue(tt), nil
 	case json.Delim:
-		d := t.(json.Delim)
-		switch ds := d.String(); ds {
+		switch ds := tt.String(); ds {
 		case "{":
 			m := Map{}
 			if err := jsonMap(dec, &m); err != nil {
@@ -37,7 +36,7 @@ func DecodeJSON(dec *json.Decoder) (Node, error) {
 			return jsonArray(dec, Array{})
 		}
 	}
-	return nil, fmt.Errorf("Unknown token %#v", t)
+	return nil, fmt.Errorf("unknown token %#v", t)
 }
 
 // UnmarshalJSON parses the JSON-encoded data to a Node.
@@ -55,7 +54,7 @@ func (n *Map) UnmarshalJSON(data []byte) error {
 	}
 	d, ok := t.(json.Delim)
 	if !ok || d.String() != "{" {
-		return fmt.Errorf("Unknown token %#v", t)
+		return fmt.Errorf("unknown token %#v", t)
 	}
 	if *n == nil {
 		*n = make(Map)
@@ -72,7 +71,7 @@ func (n *Array) UnmarshalJSON(data []byte) error {
 	}
 	d, ok := t.(json.Delim)
 	if !ok || d.String() != "[" {
-		return fmt.Errorf("Unknown token %#v", t)
+		return fmt.Errorf("unknown token %#v", t)
 	}
 	*n, err = jsonArray(dec, *n)
 	return err
@@ -87,12 +86,12 @@ func jsonMap(dec *json.Decoder, m *Map) error {
 		if d.String() == "}" {
 			return nil
 		}
-		return fmt.Errorf("Unknown token %#v", t)
+		return fmt.Errorf("unknown token %#v", t)
 	}
 
 	key, ok := t.(string)
 	if !ok {
-		return fmt.Errorf("Unknown token %#v", t)
+		return fmt.Errorf("unknown token %#v", t)
 	}
 
 	t, err = dec.Token()
@@ -152,13 +151,13 @@ func jsonValue(t json.Token) Node {
 	if t == nil {
 		return nil
 	}
-	switch t.(type) {
+	switch tt := t.(type) {
 	case string:
-		return StringValue(t.(string))
+		return StringValue(tt)
 	case bool:
-		return BoolValue(t.(bool))
+		return BoolValue(tt)
 	case float64:
-		return NumberValue(t.(float64))
+		return NumberValue(tt)
 	}
 	return StringValue(fmt.Sprintf("%#v", t))
 }

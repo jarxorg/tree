@@ -4,19 +4,53 @@ import (
 	"fmt"
 	"regexp"
 	"strconv"
+	"strings"
 )
 
 // Query is an interface that defines the methods to query a node.
 type Query interface {
 	Exec(n Node) ([]Node, error)
+	String() string
+}
+
+// EditorQuery is an interface that defines the methods to edit a node.
+type EditorQuery interface {
+	Query
+	Set(pn *Node, v Node) error
+	Append(pn *Node, v Node) error
+	Delete(pn *Node) error
 }
 
 // NopQuery is a query that implements no-op Exec method.
 type NopQuery struct{}
 
+var _ EditorQuery = (*NopQuery)(nil)
+
 // Exec returns the provided node.
 func (q NopQuery) Exec(n Node) ([]Node, error) {
 	return []Node{n}, nil
+}
+
+func (q NopQuery) String() string {
+	return "."
+}
+
+func (q NopQuery) Set(pn *Node, v Node) error {
+	*pn = v
+	return nil
+}
+
+func (q NopQuery) Append(pn *Node, v Node) error {
+	if en, ok := (*pn).(EditorNode); ok {
+		if err := en.Append(v); err == nil {
+			return nil
+		}
+	}
+	return fmt.Errorf("cannot append to %s", ".")
+}
+
+func (q NopQuery) Delete(pn *Node) error {
+	return fmt.Errorf("cannot delete %s", ".")
 }
 
 // ValueQuery is a query that returns the constant value.
@@ -29,27 +63,125 @@ func (q ValueQuery) Exec(n Node) ([]Node, error) {
 	return []Node{q.Node}, nil
 }
 
+func (q ValueQuery) String() string {
+	s, _ := MarshalJSON(q.Node)
+	return string(s)
+}
+
 // MapQuery is a key of the Map that implements methods of the Query.
 type MapQuery string
 
+var _ EditorQuery = (MapQuery)("")
+
 func (q MapQuery) Exec(n Node) ([]Node, error) {
-	if m := n.Map(); m != nil {
-		return []Node{m.Get(string(q))}, nil
+	key := string(q)
+	if n.Type().IsValue() {
+		return nil, fmt.Errorf("cannot index array with %q", key)
 	}
-	if a := n.Array(); a != nil {
-		return []Node{a.Get(string(q))}, nil
+	if n.Has(key) {
+		return []Node{n.Get(key)}, nil
 	}
-	return nil, fmt.Errorf(`Cannot index array with string "%s"`, q)
+	return nil, nil
+}
+
+func (q MapQuery) Set(pn *Node, v Node) error {
+	key := string(q)
+	if en, ok := (*pn).(EditorNode); ok {
+		return en.Set(key, v)
+	}
+	return fmt.Errorf("cannot index array with %q", key)
+}
+
+func (q MapQuery) Append(pn *Node, v Node) error {
+	n := *pn
+	key := string(q)
+	if en, ok := (*pn).(EditorNode); ok {
+		if n.Has(key) {
+			x := n.Get(key)
+			if x != nil {
+				if ex, ok := x.(EditorNode); ok {
+					if err := ex.Append(v); err == nil {
+						return nil
+					}
+				}
+			}
+			return fmt.Errorf("cannot append to %q", key)
+		}
+		return en.Set(key, Array{v})
+	}
+	return fmt.Errorf("cannot append to %q", key)
+}
+
+func (q MapQuery) Delete(pn *Node) error {
+	key := string(q)
+	if en, ok := (*pn).(EditorNode); ok {
+		if err := en.Delete(key); err == nil {
+			return nil
+		}
+	}
+	return fmt.Errorf("cannot delete %q", key)
+}
+
+func (q MapQuery) String() string {
+	return "." + string(q)
 }
 
 // ArrayQuery is an index of the Array that implements methods of the Query.
 type ArrayQuery int
 
+var _ EditorQuery = (ArrayQuery)(0)
+
 func (q ArrayQuery) Exec(n Node) ([]Node, error) {
 	if a := n.Array(); a != nil {
-		return []Node{a.Get(int(q))}, nil
+		index := int(q)
+		if n.Has(index) {
+			return []Node{a[index]}, nil
+		}
+		return nil, nil
 	}
-	return nil, fmt.Errorf(`Cannot index array with index %d`, q)
+	return nil, fmt.Errorf("cannot index array with %d", q)
+}
+
+func (q ArrayQuery) Set(pn *Node, v Node) error {
+	index := int(q)
+	if en, ok := (*pn).(EditorNode); ok {
+		return en.Set(index, v)
+	}
+	return fmt.Errorf("cannot index array with %d", index)
+}
+
+func (q ArrayQuery) Append(pn *Node, v Node) error {
+	index := int(q)
+	n := *pn
+	if en, ok := (*pn).(EditorNode); ok {
+		if n.Has(index) {
+			x := n.Get(index)
+			if x != nil {
+				if ex, ok := x.(EditorNode); ok {
+					if err := ex.Append(v); err == nil {
+						return nil
+					}
+				}
+			}
+			return fmt.Errorf("cannot append to array with %d", index)
+		}
+		return en.Set(index, Array{v})
+	}
+	return fmt.Errorf("cannot append to array with %d", index)
+}
+
+func (q ArrayQuery) Delete(pn *Node) error {
+	index := int(q)
+	if en, ok := (*pn).(EditorNode); ok {
+		if err := en.Delete(index); err == nil {
+			return nil
+		}
+	}
+	return fmt.Errorf("cannot delete array with %d", index)
+}
+
+func (q ArrayQuery) String() string {
+	return fmt.Sprintf("[%d]", q)
 }
 
 // ArrayRangeQuery represents a range of the Array that implements methods of the Query.
@@ -57,7 +189,7 @@ type ArrayRangeQuery []int
 
 func (q ArrayRangeQuery) Exec(n Node) ([]Node, error) {
 	if len(q) != 2 {
-		return nil, fmt.Errorf(`Invalid array range %v`, q)
+		return nil, fmt.Errorf("invalid array range %s", q)
 	}
 	if a := n.Array(); a != nil {
 		from, to := q[0], q[1]
@@ -68,7 +200,17 @@ func (q ArrayRangeQuery) Exec(n Node) ([]Node, error) {
 		}
 		return a[from:to], nil
 	}
-	return nil, fmt.Errorf(`Cannot index array with range %d:%d`, q[0], q[1])
+	return nil, fmt.Errorf("cannot index array with range %d:%d", q[0], q[1])
+}
+
+func (q ArrayRangeQuery) String() string {
+	ss := make([]string, len(q))
+	for i, r := range q {
+		if r != -1 {
+			ss[i] = strconv.Itoa(r)
+		}
+	}
+	return "[" + strings.Join(ss, ":") + "]"
 }
 
 // SlurpQuery is a special query that works in FilterQuery.
@@ -79,6 +221,10 @@ type SlurpQuery struct{}
 // all the results into a single node array.
 func (q SlurpQuery) Exec(n Node) ([]Node, error) {
 	return []Node{n}, nil
+}
+
+func (q SlurpQuery) String() string {
+	return " | "
 }
 
 // FilterQuery consists of multiple queries that filter the nodes in order.
@@ -112,6 +258,61 @@ func (qs FilterQuery) Exec(n Node) ([]Node, error) {
 	return rs, nil
 }
 
+func (qs FilterQuery) execForEdit(n Node) ([]Node, error) {
+	rs := []Node{n}
+	for i, q := range qs[:len(qs)-1] {
+		switch q.(type) {
+		case SlurpQuery:
+			nrs, err := q.Exec(Array(rs))
+			if err != nil {
+				return nil, err
+			}
+			rs = nrs
+			continue
+		}
+		var nrs []Node
+		for _, r := range rs {
+			if r == nil {
+				continue
+			}
+			nr, err := q.Exec(r)
+			if err != nil {
+				return nil, err
+			}
+			if len(nr) == 0 {
+				var empty Node
+				switch qs[i+1].(type) {
+				case MapQuery:
+					empty = Map{}
+				case ArrayQuery:
+					empty = Array{}
+				}
+				if empty != nil {
+					if eq, ok := q.(EditorQuery); ok {
+						if err = eq.Set(&r, empty); err != nil {
+							return nil, err
+						}
+						if nr, err = eq.Exec(r); err != nil {
+							return nil, err
+						}
+					}
+				}
+			}
+			nrs = append(nrs, nr...)
+		}
+		rs = nrs
+	}
+	return rs, nil
+}
+
+func (qs FilterQuery) String() string {
+	ss := make([]string, len(qs))
+	for i, q := range qs {
+		ss[i] = q.String()
+	}
+	return strings.Join(ss, "")
+}
+
 // WalkQuery is a key of each nodes that implements methods of the Query.
 type WalkQuery string
 
@@ -120,8 +321,8 @@ func (q WalkQuery) Exec(root Node) ([]Node, error) {
 	key := string(q)
 	var r []Node
 	err := Walk(root, func(n Node, keys []interface{}) error {
-		if nn := n.Get(key); nn != nil {
-			r = append(r, nn)
+		if n.Has(key) {
+			r = append(r, n.Get(key))
 			return SkipWalk
 		}
 		return nil
@@ -132,16 +333,22 @@ func (q WalkQuery) Exec(root Node) ([]Node, error) {
 	return r, nil
 }
 
+func (q WalkQuery) String() string {
+	return ".." + string(q)
+}
+
 // Selector checks if a node is eligible for selection.
 type Selector interface {
 	Matches(n Node) (bool, error)
+	String() string
 }
 
 // And represents selectors that combines each selector with and.
 type And []Selector
 
-func (ss And) Matches(n Node) (bool, error) {
-	for _, s := range ss {
+// Matches returns true if all selectors returns true.
+func (a And) Matches(n Node) (bool, error) {
+	for _, s := range a {
 		ok, err := s.Matches(n)
 		if err != nil || !ok {
 			return false, err
@@ -150,11 +357,20 @@ func (ss And) Matches(n Node) (bool, error) {
 	return true, nil
 }
 
+func (a And) String() string {
+	ss := make([]string, len(a))
+	for i, s := range a {
+		ss[i] = s.String()
+	}
+	return "(" + strings.Join(ss, " and ") + ")"
+}
+
 // Or represents selectors that combines each selector with or.
 type Or []Selector
 
-func (ss Or) Matches(n Node) (bool, error) {
-	for _, s := range ss {
+// Matches returns true if anyone returns true.
+func (o Or) Matches(n Node) (bool, error) {
+	for _, s := range o {
 		ok, err := s.Matches(n)
 		if err != nil {
 			return false, err
@@ -164,6 +380,14 @@ func (ss Or) Matches(n Node) (bool, error) {
 		}
 	}
 	return false, nil
+}
+
+func (o Or) String() string {
+	ss := make([]string, len(o))
+	for i, s := range o {
+		ss[i] = s.String()
+	}
+	return "(" + strings.Join(ss, " or ") + ")"
 }
 
 // Comparator represents a comparable selector.
@@ -190,7 +414,7 @@ func (c Comparator) Matches(n Node) (bool, error) {
 	case 1:
 		l0 = l[0]
 	default:
-		return false, fmt.Errorf("%#v returns no single value %+v", c.Left, l)
+		return false, fmt.Errorf("%q returns no single value %+v", c.Left, l)
 	}
 	switch len(r) {
 	case 0:
@@ -198,12 +422,16 @@ func (c Comparator) Matches(n Node) (bool, error) {
 	case 1:
 		r0 = r[0]
 	default:
-		return false, fmt.Errorf("%#v returns no single value %+v", c.Right, r)
+		return false, fmt.Errorf("%q returns no single value %+v", c.Right, r)
 	}
 	if l0 == nil || r0 == nil {
 		return (l0 == nil && r0 == nil), nil
 	}
 	return l0.Value().Compare(c.Op, r0.Value()), nil
+}
+
+func (c Comparator) String() string {
+	return fmt.Sprintf("%s %s %s", c.Left, c.Op, c.Right)
 }
 
 // SelectQuery returns nodes that matched by selectors.
@@ -245,6 +473,10 @@ func (q SelectQuery) Exec(n Node) ([]Node, error) {
 		return rs, nil
 	}
 	return nil, nil
+}
+
+func (q SelectQuery) String() string {
+	return "[" + q.Selector.String() + "]"
 }
 
 var (
@@ -325,7 +557,7 @@ func tokenizeQuery(expr string) (*token, error) {
 		switch m[2] {
 		case "]", ")":
 			if (m[2] == "]" && current.cmd != "[") || (m[2] == ")" && current.cmd != "(") {
-				return nil, fmt.Errorf(`Syntax error: no left bracket: "%s"`, expr)
+				return nil, fmt.Errorf("syntax error: no left bracket: %q", expr)
 			}
 			current = current.parent
 		case "[", "(":
@@ -336,7 +568,7 @@ func tokenizeQuery(expr string) (*token, error) {
 		}
 	}
 	if current.parent != nil {
-		return nil, fmt.Errorf(`Syntax error: no right brackets: "%s"`, expr)
+		return nil, fmt.Errorf("syntax error: no right brackets: %q", expr)
 	}
 	return current, nil
 }
@@ -368,7 +600,7 @@ func tokenToQuery(t *token, expr string) (Query, error) {
 		if child == 1 {
 			i, err := strconv.Atoi(t.children[0].value)
 			if err != nil {
-				return nil, fmt.Errorf(`Syntax error: invalid array index: "%s"`, expr)
+				return nil, fmt.Errorf("syntax error: invalid array index: %q", expr)
 			}
 			return ArrayQuery(i), nil
 		}
@@ -382,7 +614,7 @@ func tokenToQuery(t *token, expr string) (Query, error) {
 		return SelectQuery{selector}, nil
 	}
 	if child == 0 {
-		return nil, fmt.Errorf(`Syntax error: invalid token %s: "%s"`, t.cmd, expr)
+		return nil, fmt.Errorf("syntax error: invalid token %s: %q", t.cmd, expr)
 	}
 	if child == 1 {
 		return tokenToQuery(t.children[0], expr)
@@ -405,14 +637,14 @@ func tokensToArrayRangeQuery(ts []*token, i int, expr string) (Query, error) {
 		var err error
 		from, err = strconv.Atoi(ts[j].value)
 		if err != nil {
-			return nil, fmt.Errorf(`Syntax error: invalid array range: %q`, expr)
+			return nil, fmt.Errorf("syntax error: invalid array range: %q", expr)
 		}
 	}
 	if j := i + 1; j < len(ts) {
 		var err error
 		to, err = strconv.Atoi(ts[j].value)
 		if err != nil {
-			return nil, fmt.Errorf(`Syntax error: invalid array range: %q`, expr)
+			return nil, fmt.Errorf("syntax error: invalid array range: %q", expr)
 		}
 	}
 	return ArrayRangeQuery{from, to}, nil
@@ -426,7 +658,7 @@ func tokensToSelector(ts []*token, expr string) (Selector, error) {
 		switch t.cmd {
 		case "and", "or":
 			if andOr != "" && andOr != t.cmd {
-				return nil, fmt.Errorf(`Syntax error: mixed and|or: %q`, expr)
+				return nil, fmt.Errorf("syntax error: mixed and|or: %q", expr)
 			}
 			andOr = t.cmd
 			groups = append(groups, ts[off:i])
@@ -442,6 +674,7 @@ func tokensToSelector(ts []*token, expr string) (Selector, error) {
 	var ss []Selector
 	for _, group := range groups {
 		op := -1
+	GROUP:
 		for i, t := range group {
 			if t.cmd == "(" {
 				sss, err := tokensToSelector(t.children, expr)
@@ -454,7 +687,7 @@ func tokensToSelector(ts []*token, expr string) (Selector, error) {
 			switch Operator(t.cmd) {
 			case EQ, GT, GE, LT, LE:
 				op = i
-				break
+				break GROUP
 			}
 		}
 		if op == -1 {
@@ -483,4 +716,142 @@ func Find(n Node, expr string) ([]Node, error) {
 		return nil, err
 	}
 	return q.Exec(n)
+}
+
+type arrayHolder struct{ a *Array }
+
+func (h *arrayHolder) Type() Type                                        { return h.a.Type() }
+func (h *arrayHolder) Array() Array                                      { return *h.a }
+func (h *arrayHolder) Map() Map                                          { return h.a.Map() }
+func (h *arrayHolder) Value() Value                                      { return h.a.Value() }
+func (h *arrayHolder) Has(key interface{}) bool                          { return h.a.Has(key) }
+func (h *arrayHolder) Get(key interface{}) Node                          { return h.a.Get(key) }
+func (h *arrayHolder) Each(cb func(key interface{}, v Node) error) error { return h.a.Each(cb) }
+func (h *arrayHolder) Find(expr string) ([]Node, error)                  { return h.a.Find(expr) }
+func (h *arrayHolder) Delete(key interface{}) error                      { return h.a.Delete(key) }
+func (h *arrayHolder) Append(v Node) error                               { return h.a.Append(*holdArray(&v)) }
+func (h *arrayHolder) Set(key interface{}, v Node) error                 { return h.a.Set(key, *holdArray(&v)) }
+
+var _ EditorNode = (*arrayHolder)(nil)
+
+func holdArray(pn *Node) *Node {
+	n := *pn
+	if a := n.Array(); a != nil {
+		ah := &arrayHolder{&a}
+		*pn = ah
+		for i, nn := range a {
+			if nn != nil {
+				holdArray(&nn)
+				a[i] = nn
+			}
+		}
+	} else if m := n.Map(); m != nil {
+		for key, nn := range m {
+			if nn != nil {
+				holdArray(&nn)
+				m[key] = nn
+			}
+		}
+	}
+	return pn
+}
+
+func unholdArray(pn *Node) {
+	n := *pn
+	if a := n.Array(); a != nil {
+		if ah, ok := n.(*arrayHolder); ok {
+			a = *ah.a
+			*pn = a
+		}
+		for i, nn := range a {
+			if nn != nil {
+				unholdArray(&nn)
+				a[i] = nn
+			}
+		}
+	} else if m := n.Map(); m != nil {
+		for key, nn := range m {
+			if nn != nil {
+				unholdArray(&nn)
+				m[key] = nn
+			}
+		}
+	}
+}
+
+var editRegexp = regexp.MustCompile(`(.+) (=|\+=|set|append|add|delete|del) ?(.*)`)
+
+func Edit(pn *Node, expr string) error {
+	ms := editRegexp.FindStringSubmatch(expr)
+	if len(ms) != 4 {
+		return fmt.Errorf("syntax error: invalid edit expression %q", expr)
+	}
+	left, op, right := ms[1], ms[2], ms[3]
+
+	var v Node
+	if right != "" {
+		var err error
+		v, err = UnmarshalJSON([]byte(right))
+		if err != nil {
+			return err
+		}
+	}
+	q, err := ParseQuery(left)
+	if err != nil {
+		return err
+	}
+
+	holdArray(pn)
+	defer unholdArray(pn)
+
+	return editQuery(pn, q, op, v)
+}
+
+func editQuery(pn *Node, q Query, op string, v Node) error {
+	switch tq := q.(type) {
+	case FilterQuery:
+		return execForEdit(pn, tq, op, v)
+	case EditorQuery:
+		return execEdit(pn, tq, op, v)
+	}
+	return fmt.Errorf("syntax error: unsupported edit query: %s", q)
+}
+
+func execForEdit(pn *Node, fq FilterQuery, op string, v Node) error {
+	l := len(fq)
+	if l == 0 {
+		return nil
+	}
+
+	nn := []Node{*pn}
+	if l > 1 {
+		var err error
+		nn, err = fq.execForEdit(*pn)
+		if err != nil {
+			return err
+		}
+	}
+
+	q := fq[l-1]
+	for _, n := range nn {
+		if n == nil {
+			return fmt.Errorf("runtime error: nil")
+		}
+		if err := editQuery(&n, q, op, v); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func execEdit(pn *Node, eq EditorQuery, op string, v Node) error {
+	switch op {
+	case "=", "set":
+		return eq.Set(pn, v)
+	case "delete", "del":
+		return eq.Delete(pn)
+	case "+=", "append":
+		return eq.Append(pn, v)
+	}
+	return fmt.Errorf("syntax error: unsupported edit operation %q", op)
 }

@@ -1,24 +1,9 @@
 package tree
 
 import (
-	"fmt"
-	"io"
 	"reflect"
-	"strings"
 	"testing"
 )
-
-// printToken prints token tree for debug.
-func printToken(w io.Writer, t *token, depth int) {
-	indent := strings.Repeat("\t", depth)
-	fmt.Fprintf(w, "%s{%s} %s\n", indent, t.cmd, t.value)
-	if len(t.children) > 0 {
-		depth++
-		for _, c := range t.children {
-			printToken(w, c, depth)
-		}
-	}
-}
 
 func Test_Query(t *testing.T) {
 	tests := []struct {
@@ -38,7 +23,7 @@ func Test_Query(t *testing.T) {
 		}, {
 			q:      MapQuery("key"),
 			n:      ToValue("not map"),
-			errstr: `Cannot index array with string "key"`,
+			errstr: `cannot index array with "key"`,
 		}, {
 			q:    ArrayQuery(0),
 			n:    Array{ToValue(1)},
@@ -46,7 +31,7 @@ func Test_Query(t *testing.T) {
 		}, {
 			q:      ArrayQuery(0),
 			n:      ToValue("not array"),
-			errstr: `Cannot index array with index 0`,
+			errstr: `cannot index array with 0`,
 		}, {
 			q:    ArrayRangeQuery{0, 2},
 			n:    Array{ToValue(0), ToValue(1), ToValue(2)},
@@ -58,11 +43,11 @@ func Test_Query(t *testing.T) {
 		}, {
 			q:      ArrayRangeQuery{0, 1, 2},
 			n:      Array{},
-			errstr: `Invalid array range [0 1 2]`,
+			errstr: `invalid array range [0:1:2]`,
 		}, {
 			q:      ArrayRangeQuery{0, 1},
 			n:      Map{},
-			errstr: `Cannot index array with range 0:1`,
+			errstr: `cannot index array with range 0:1`,
 		}, {
 			q:    FilterQuery{MapQuery("key"), ArrayQuery(0)},
 			n:    Map{"key": Array{ToValue(1)}},
@@ -70,7 +55,7 @@ func Test_Query(t *testing.T) {
 		}, {
 			q:      FilterQuery{MapQuery("key"), ArrayQuery(0)},
 			n:      Map{"key": ToValue(1)},
-			errstr: `Cannot index array with index 0`,
+			errstr: `cannot index array with 0`,
 		}, {
 			q: SelectQuery{And{
 				Comparator{MapQuery("key"), EQ, ValueQuery{ToValue(1)}},
@@ -105,35 +90,84 @@ func Test_Query(t *testing.T) {
 				Map{"key1": ToValue(1), "key2": ToValue("a")},
 			},
 		}, {
-			q: SelectQuery{And{
-				Comparator{ArrayQuery(0), EQ, ValueQuery{ToValue(1)}},
-			}},
-			n:      Array{Map{"key": ToValue(1)}},
-			errstr: `Cannot index array with index 0`,
-		}, {
-			q: SelectQuery{And{
-				Comparator{ValueQuery{ToValue(1)}, EQ, ArrayQuery(0)},
-			}},
-			n:      Array{Map{"key": ToValue(1)}},
-			errstr: `Cannot index array with index 0`,
+			q: WalkQuery("key1"),
+			n: Array{
+				Map{"key1": ToValue(1), "key2": ToValue("a")},
+				Map{"key1": ToValue(2), "key2": ToValue("b")},
+				Map{"key1": ToValue(3), "key2": ToValue("c")},
+			},
+			want: Array{ToValue(1), ToValue(2), ToValue(3)},
 		},
 	}
 	for i, test := range tests {
 		got, err := test.q.Exec(test.n)
 		if test.errstr != "" {
 			if err == nil {
-				t.Fatalf("Fatal tests[%d] returns no error", i)
+				t.Fatalf("tests[%d]: %s returns no error", i, test.q)
 			}
 			if err.Error() != test.errstr {
-				t.Errorf(`Error tests[%d] returns error %s; want %s`, i, err.Error(), test.errstr)
+				t.Errorf(`tests[%d]: %s returns error %s; want %s`, i, test.q, err.Error(), test.errstr)
 			}
 			continue
 		}
 		if err != nil {
-			t.Fatal(err)
+			t.Fatal(err, i)
 		}
 		if !reflect.DeepEqual(got, test.want) {
-			t.Errorf(`Error tests[%d] returns %v; want %v`, i, got, test.want)
+			t.Errorf(`tests[%d]: %s returns %v; want %v`, i, test.q, got, test.want)
+		}
+	}
+}
+
+func Test_Query_String(t *testing.T) {
+	tests := []struct {
+		q    Query
+		want string
+	}{
+		{
+			q:    NopQuery{},
+			want: ".",
+		}, {
+			q:    MapQuery("key"),
+			want: ".key",
+		}, {
+			q:    ArrayQuery(1),
+			want: "[1]",
+		}, {
+			q:    ArrayRangeQuery{0, 2},
+			want: "[0:2]",
+		}, {
+			q:    ArrayRangeQuery{-1, 2},
+			want: "[:2]",
+		}, {
+			q:    SlurpQuery{},
+			want: " | ",
+		}, {
+			q:    FilterQuery{MapQuery("key1"), ArrayQuery(0), MapQuery("key2")},
+			want: ".key1[0].key2",
+		}, {
+			q: SelectQuery{
+				And{
+					Or{
+						Comparator{MapQuery("key2"), EQ, ValueQuery{ToValue("a")}},
+						Comparator{MapQuery("key2"), EQ, ValueQuery{ToValue("b")}},
+					},
+					Comparator{MapQuery("key1"), LE, ValueQuery{ToValue(1)}},
+				},
+			},
+			want: `[((.key2 == "a" or .key2 == "b") and .key1 <= 1)]`,
+		}, {
+			q:    WalkQuery("key"),
+			want: "..key",
+		}, {
+			q:    FilterQuery{MapQuery("key1"), WalkQuery("key2")},
+			want: ".key1..key2",
+		},
+	}
+	for i, test := range tests {
+		got := test.q.String()
+		if got != test.want {
+			t.Errorf(`tests[%d]: returns %v; want %v`, i, got, test.want)
 		}
 	}
 }
@@ -225,7 +259,7 @@ func Test_ParseQuery(t *testing.T) {
 			t.Fatal(err)
 		}
 		if !reflect.DeepEqual(got, test.want) {
-			t.Errorf(`Error tests[%d]: "%s" returns %#v; want %#v`, i, test.expr, got, test.want)
+			t.Errorf(`tests[%d]: "%s" returns %#v; want %#v`, i, test.expr, got, test.want)
 		}
 	}
 }
@@ -237,43 +271,43 @@ func Test_ParseQuery_Errors(t *testing.T) {
 	}{
 		{
 			expr:   `<`,
-			errstr: `Syntax error: invalid token <: "<"`,
+			errstr: `syntax error: invalid token <: "<"`,
 		}, {
 			expr:   `[`,
-			errstr: `Syntax error: no right brackets: "["`,
+			errstr: `syntax error: no right brackets: "["`,
 		}, {
 			expr:   `]`,
-			errstr: `Syntax error: no left bracket: "]"`,
+			errstr: `syntax error: no left bracket: "]"`,
 		}, {
 			expr:   `[a]`,
-			errstr: `Syntax error: invalid array index: "[a]"`,
+			errstr: `syntax error: invalid array index: "[a]"`,
 		}, {
 			expr:   `[a:b]`,
-			errstr: `Syntax error: invalid array range: "[a:b]"`,
+			errstr: `syntax error: invalid array range: "[a:b]"`,
 		}, {
 			expr:   `[0:a]`,
-			errstr: `Syntax error: invalid array range: "[0:a]"`,
+			errstr: `syntax error: invalid array range: "[0:a]"`,
 		}, {
 			expr:   `[[l] == .r]`,
-			errstr: `Syntax error: invalid array index: "[[l] == .r]"`,
+			errstr: `syntax error: invalid array index: "[[l] == .r]"`,
 		}, {
 			expr:   `[.l == [r]]`,
-			errstr: `Syntax error: invalid array index: "[.l == [r]]"`,
+			errstr: `syntax error: invalid array index: "[.l == [r]]"`,
 		}, {
 			expr:   `.a[a]`,
-			errstr: `Syntax error: invalid array index: ".a[a]"`,
+			errstr: `syntax error: invalid array index: ".a[a]"`,
 		},
 	}
 	for i, test := range tests {
 		got, err := ParseQuery(test.expr)
 		if got != nil {
-			t.Errorf(`Error tests[%d] returns not nil %#v`, i, got)
+			t.Errorf(`tests[%d]: returns not nil %#v`, i, got)
 		}
 		if err == nil {
-			t.Fatalf(`Error tests[%d] returns no error`, i)
+			t.Fatalf(`tests[%d]: returns no error`, i)
 		}
 		if err.Error() != test.errstr {
-			t.Errorf(`Error tests[%d] returns error %s; want %s`, i, err.Error(), test.errstr)
+			t.Errorf(`tests[%d]: returns error %s; want %s`, i, err.Error(), test.errstr)
 		}
 	}
 }
@@ -350,6 +384,12 @@ func Test_Find(t *testing.T) {
 			expr: `..book[0]`,
 			want: []Node{n.Get("store").Get("book").Get(0)},
 		}, {
+			expr: `..book[0:2].title`,
+			want: []Node{StringValue("Sayings of the Century"), StringValue("Sword of Honour")},
+		}, {
+			expr: `..book[0:2] | [0].title`,
+			want: []Node{StringValue("Sayings of the Century")},
+		}, {
 			expr: `.store.book.0`,
 			want: []Node{n.Get("store").Get("book").Get(0)},
 		}, {
@@ -365,8 +405,14 @@ func Test_Find(t *testing.T) {
 			expr: `.store.book[1:].price`,
 			want: ToNodeValues(12.99, 8.99, 22.99),
 		}, {
+			expr: `.store.book[:1].price`,
+			want: ToNodeValues(8.95),
+		}, {
 			expr: `.store.book[].author`,
 			want: ToNodeValues("Nigel Rees", "Evelyn Waugh", "Herman Melville", "J. R. R. Tolkien"),
+		}, {
+			expr: `.store.book[.category == "fiction"].title`,
+			want: ToNodeValues("Sword of Honour", "Moby Dick", "The Lord of the Rings"),
 		}, {
 			expr: `.store.book[.category == "fiction" and .price < 10].title`,
 			want: ToNodeValues("Moby Dick"),
@@ -384,10 +430,223 @@ func Test_Find(t *testing.T) {
 	for i, test := range tests {
 		got, err := Find(n, test.expr)
 		if err != nil {
-			t.Fatalf("Fatal tests[%d]: %+v", i, err)
+			t.Fatalf("tests[%d]: %+v", i, err)
 		}
 		if !reflect.DeepEqual(got, test.want) {
-			t.Errorf("Error tests[%d] returns %#v; want %#v", i, got, test.want)
+			t.Errorf("tests[%d]: returns %#v; want %#v", i, got, test.want)
+		}
+	}
+}
+
+func Test_holdArray(t *testing.T) {
+	var got Node = Array{
+		StringValue("0"),
+		Array{StringValue("0-0"), StringValue("0-1")},
+		Map{"1": Array{BoolValue(true)}},
+	}
+	want := &arrayHolder{
+		&Array{
+			StringValue("0"),
+			&arrayHolder{a: &Array{StringValue("0-0"), StringValue("0-1")}},
+			Map{"1": &arrayHolder{a: &Array{BoolValue(true)}}},
+		},
+	}
+	holdArray(&got)
+	if !reflect.DeepEqual(got, want) {
+		t.Errorf("got %#v; want %#v", got, want)
+	}
+}
+
+func Test_unholdArray(t *testing.T) {
+	var want Node = Array{
+		StringValue("0"),
+		Array{StringValue("0-0"), StringValue("0-1")},
+		Map{"1": Array{BoolValue(true)}},
+	}
+	var got Node = &arrayHolder{
+		&Array{
+			StringValue("0"),
+			&arrayHolder{a: &Array{StringValue("0-0"), StringValue("0-1")}},
+			Map{"1": &arrayHolder{a: &Array{BoolValue(true)}}},
+		},
+	}
+	unholdArray(&got)
+	if !reflect.DeepEqual(got, want) {
+		t.Errorf("got %#v; want %#v", got, want)
+	}
+}
+
+func Test_Edit(t *testing.T) {
+	tests := []struct {
+		n      Node
+		expr   string
+		want   Node
+		errstr string
+	}{
+		{
+			n:    Map{},
+			expr: `.store = {}`,
+			want: Map{"store": Map{}},
+		}, {
+			n:    Map{},
+			expr: `.store.book = {}`,
+			want: Map{"store": Map{"book": Map{}}},
+		}, {
+			n:    Map{},
+			expr: `.store.pen = [{"color":"red"},{"color":"blue"}]`,
+			want: Map{
+				"store": Map{
+					"pen": Array{
+						Map{"color": StringValue("red")},
+						Map{"color": StringValue("blue")},
+					},
+				},
+			},
+		}, {
+			n:      StringValue("str"),
+			expr:   `.key = {}`,
+			errstr: `cannot index array with "key"`,
+		}, {
+			n:      Map{"key": StringValue("str")},
+			expr:   `. += {}`,
+			errstr: "cannot append to .",
+		}, {
+			n:      StringValue("str"),
+			expr:   `. += {}`,
+			errstr: "cannot append to .",
+		}, {
+			n:      Map{"key": StringValue("str")},
+			expr:   `.key += {}`,
+			errstr: `cannot append to "key"`,
+		}, {
+			n:      StringValue("str"),
+			expr:   `.key += {}`,
+			errstr: `cannot append to "key"`,
+		}, {
+			n:    Array{},
+			expr: `[0] = "red"`,
+			want: Array{StringValue("red")},
+		}, {
+			n:    Array{},
+			expr: `[0][1] = "red"`,
+			want: Array{Array{nil, StringValue("red")}},
+		}, {
+			n:      StringValue("str"),
+			expr:   `[0] = "red"`,
+			errstr: `cannot index array with 0`,
+		}, {
+			n:    Array{},
+			expr: `.0 = "red"`,
+			want: Array{StringValue("red")},
+		}, {
+			n:    Array{},
+			expr: `.0.1 = "red"`,
+			want: Array{Map{"1": StringValue("red")}},
+		}, {
+			n:    Array{},
+			expr: `. = "red"`,
+			want: StringValue("red"),
+		}, {
+			n:    Map{},
+			expr: `.colors += "red"`,
+			want: Map{"colors": Array{StringValue("red")}},
+		}, {
+			n:    Map{"colors": Array{StringValue("red"), StringValue("green")}},
+			expr: `.colors += "blue"`,
+			want: Map{"colors": Array{StringValue("red"), StringValue("green"), StringValue("blue")}},
+		}, {
+			n:    Array{Array{StringValue("red")}},
+			expr: `[0] += "blue"`,
+			want: Array{Array{StringValue("red"), StringValue("blue")}},
+		}, {
+			n:    Array{Array{StringValue("red")}},
+			expr: `[2] += "blue"`,
+			want: Array{Array{StringValue("red")}, nil, Array{StringValue("blue")}},
+		}, {
+			n:      Array{StringValue("red")},
+			expr:   `[0] += "blue"`,
+			errstr: `cannot append to array with 0`,
+		}, {
+			n:      StringValue("red"),
+			expr:   `[0] += "blue"`,
+			errstr: `cannot append to array with 0`,
+		}, {
+			n:    Array{},
+			expr: `. += "red"`,
+			want: Array{StringValue("red")},
+		}, {
+			n:    Map{"key1": StringValue("value1"), "key2": StringValue("value2")},
+			expr: `.key1 delete`,
+			want: Map{"key2": StringValue("value2")},
+		}, {
+			n:    Array{StringValue("red")},
+			expr: `[0] delete`,
+			want: Array{},
+		}, {
+			n:    Array{StringValue("red")},
+			expr: `.0 delete`,
+			want: Array{},
+		}, {
+			n:      Map{},
+			expr:   `. delete`,
+			errstr: "cannot delete .",
+		}, {
+			n:      StringValue("str"),
+			expr:   `.key delete`,
+			errstr: `cannot delete "key"`,
+		}, {
+			n:      StringValue("str"),
+			expr:   `[0] delete`,
+			errstr: `cannot delete array with 0`,
+		}, {
+			n:      Array{},
+			expr:   `..name = "number"`,
+			errstr: "syntax error: unsupported edit query: ..name",
+		}, {
+			n: Map{
+				"users": Array{
+					Map{"name": StringValue("one"), "class": StringValue("A")},
+					Map{"name": StringValue("two"), "class": StringValue("B")},
+				},
+			},
+			expr: `..users[].class = "A"`,
+			want: Map{
+				"users": Array{
+					Map{"name": StringValue("one"), "class": StringValue("A")},
+					Map{"name": StringValue("two"), "class": StringValue("A")},
+				},
+			},
+		}, {
+			n: Map{
+				"users": Array{
+					Map{"name": StringValue("one"), "class": StringValue("A")},
+				},
+			},
+			expr: `.users[] | [0].name = "ONE"`,
+			want: Map{
+				"users": Array{
+					Map{"name": StringValue("ONE"), "class": StringValue("A")},
+				},
+			},
+		},
+	}
+	for i, test := range tests {
+		err := Edit(&(test.n), test.expr)
+		if test.errstr != "" {
+			if err == nil {
+				t.Fatalf("tests[%d]: no error; want %s", i, test.errstr)
+			}
+			if err.Error() != test.errstr {
+				t.Errorf("tests[%d]: %s; want %s", i, err.Error(), test.errstr)
+			}
+			continue
+		}
+		if err != nil {
+			t.Fatalf("tests[%d]: %+v", i, err)
+		}
+		got := test.n
+		if !reflect.DeepEqual(got, test.want) {
+			t.Errorf("tests[%d]: returns %#v; want %#v", i, got, test.want)
 		}
 	}
 }

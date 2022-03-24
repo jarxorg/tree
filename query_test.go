@@ -423,6 +423,9 @@ func Test_Find(t *testing.T) {
 			expr: `.store.book[(.category == "fiction" or .category == "reference") and .price < 10].title`,
 			want: ToNodeValues("Sayings of the Century", "Moby Dick"),
 		}, {
+			expr: `.store.book[(.category != "reference") and .price >= 10].title`,
+			want: ToNodeValues("Sword of Honour", "The Lord of the Rings"),
+		}, {
 			expr: `.store.book[].author|[0]`,
 			want: ToNodeValues("Nigel Rees"),
 		},

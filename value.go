@@ -18,6 +18,8 @@ var (
 	LT Operator = "<"
 	// LE is `<=`.
 	LE Operator = "<="
+	// NE is `!=`
+	NE Operator = "!="
 )
 
 // Value provides the accessor of primitive value.
@@ -104,7 +106,7 @@ func (n StringValue) String() string {
 // Compare compares n and v.
 func (n StringValue) Compare(op Operator, v Value) bool {
 	if v == nil || !v.Type().IsStringValue() {
-		return false
+		return (op == NE)
 	}
 	sn := n.String()
 	sv := v.String()
@@ -119,6 +121,8 @@ func (n StringValue) Compare(op Operator, v Value) bool {
 		return sn < sv
 	case LE:
 		return sn <= sv
+	case NE:
+		return sn != sv
 	}
 	return false
 }
@@ -196,11 +200,13 @@ func (n BoolValue) String() string {
 // Compare compares n and v.
 func (n BoolValue) Compare(op Operator, v Value) bool {
 	if v == nil || !v.Type().IsBoolValue() {
-		return false
+		return (op == NE)
 	}
 	switch op {
 	case EQ:
 		return n.Bool() == v.Bool()
+	case NE:
+		return n.Bool() != v.Bool()
 	}
 	return false
 }
@@ -278,7 +284,7 @@ func (n NumberValue) String() string {
 // Compare compares n and v.
 func (n NumberValue) Compare(op Operator, v Value) bool {
 	if v == nil || !v.Type().IsNumberValue() {
-		return false
+		return (op == NE)
 	}
 	nv := v.Float64()
 	nn := n.Float64()
@@ -293,6 +299,8 @@ func (n NumberValue) Compare(op Operator, v Value) bool {
 		return nn < nv
 	case LE:
 		return nn <= nv
+	case NE:
+		return nn != nv
 	}
 	return false
 }

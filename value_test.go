@@ -39,31 +39,31 @@ func Test_Value(t *testing.T) {
 		v := test.value
 		vv := v.Value()
 		if tt := v.Type(); tt&TypeValue == 0 {
-			t.Errorf(`Error tests[%d] Type returns %v; want TypeValue`, i, tt)
+			t.Errorf(`tests[%d] Type returns %v; want TypeValue`, i, tt)
 		}
 		if a := v.Array(); a != nil {
-			t.Errorf(`Error tests[%d] Array returns %v; want nil`, i, a)
+			t.Errorf(`tests[%d] Array returns %v; want nil`, i, a)
 		}
 		if m := v.Map(); m != nil {
-			t.Errorf(`Error tests[%d] Map returns %v; want nil`, i, m)
+			t.Errorf(`tests[%d] Map returns %v; want nil`, i, m)
 		}
 		if vv.(Node) != v {
-			t.Errorf(`Error tests[%d] Value returns %v; want %v`, i, vv, v)
+			t.Errorf(`tests[%d] Value returns %v; want %v`, i, vv, v)
 		}
 		if b := vv.Bool(); b != test.b {
-			t.Errorf(`Error tests[%d] Bool returns %v; want %v`, i, b, test.b)
+			t.Errorf(`tests[%d] Bool returns %v; want %v`, i, b, test.b)
 		}
 		if ii := vv.Int(); ii != test.i {
-			t.Errorf(`Error tests[%d] Int returns %v; want %v`, i, ii, test.i)
+			t.Errorf(`tests[%d] Int returns %v; want %v`, i, ii, test.i)
 		}
 		if i64 := vv.Int64(); i64 != test.i64 {
-			t.Errorf(`Error tests[%d] Int64 returns %v; want %v`, i, i64, test.i64)
+			t.Errorf(`tests[%d] Int64 returns %v; want %v`, i, i64, test.i64)
 		}
 		if f64 := vv.Float64(); f64 != test.f64 {
-			t.Errorf(`Error tests[%d] Float64 returns %v; want %v`, i, f64, test.f64)
+			t.Errorf(`tests[%d] Float64 returns %v; want %v`, i, f64, test.f64)
 		}
 		if s := vv.String(); s != test.s {
-			t.Errorf(`Error tests[%d] String returns %v; want %v`, i, s, test.s)
+			t.Errorf(`tests[%d] String returns %v; want %v`, i, s, test.s)
 		}
 	}
 }
@@ -91,6 +91,10 @@ func Test_Value_Compare(t *testing.T) {
 		{StringValue("x"), LE, StringValue("a"), false},
 		{StringValue("x"), LE, StringValue("x"), true},
 		{StringValue("x"), LE, StringValue("y"), true},
+		{StringValue("x"), NE, nil, true},
+		{StringValue("x"), NE, StringValue("x"), false},
+		{StringValue("x"), NE, StringValue("y"), true},
+		{StringValue("1"), NE, NumberValue(1), true},
 		{StringValue("x"), Operator("unknown"), StringValue("x"), false},
 		{NumberValue(1), EQ, nil, false},
 		{NumberValue(1), EQ, NumberValue(1), true},
@@ -109,17 +113,24 @@ func Test_Value_Compare(t *testing.T) {
 		{NumberValue(1), LE, NumberValue(0), false},
 		{NumberValue(1), LE, NumberValue(1), true},
 		{NumberValue(1), LE, NumberValue(2), true},
+		{NumberValue(1), NE, nil, true},
+		{NumberValue(1), NE, NumberValue(1), false},
+		{NumberValue(1), NE, NumberValue(0), true},
+		{NumberValue(1), NE, NumberValue(1.0), false},
 		{NumberValue(1), Operator("unknown"), NumberValue(1), false},
 		{BoolValue(true), EQ, BoolValue(true), true},
 		{BoolValue(true), EQ, BoolValue(false), false},
 		{BoolValue(true), EQ, StringValue("true"), false},
 		{BoolValue(true), LT, BoolValue(true), false},
 		{BoolValue(true), GT, BoolValue(true), false},
+		{BoolValue(true), NE, BoolValue(true), false},
+		{BoolValue(true), NE, BoolValue(false), true},
+		{BoolValue(true), NE, StringValue("true"), true},
 	}
 	for i, test := range tests {
 		got := test.n.Compare(test.op, test.v)
 		if got != test.want {
-			t.Errorf(`Error tests[%d] returns %v; want %v`, i, got, test.want)
+			t.Errorf(`tests[%d] returns %v; want %v`, i, got, test.want)
 		}
 	}
 }
@@ -150,7 +161,7 @@ func Test_Value_Find(t *testing.T) {
 			t.Fatal(err)
 		}
 		if !reflect.DeepEqual(got, test.want) {
-			t.Errorf("Error tests[%d] returns %#v; want %#v", i, got, test.want)
+			t.Errorf("tests[%d] returns %#v; want %#v", i, got, test.want)
 		}
 	}
 }

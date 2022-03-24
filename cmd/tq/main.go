@@ -16,7 +16,7 @@ import (
 
 const (
 	cmd          = "tq"
-	desc         = cmd + " is a portable command-line JSON/YAML processor."
+	desc         = cmd + " is a command-line JSON/YAML processor."
 	usage        = cmd + " [flags] [query] ([file...])"
 	examplesText = `Examples:
   % echo '{"colors": ["red", "green", "blue"]}' | tq '.colors[0]'
@@ -25,7 +25,7 @@ const (
   % echo '{"users":[{"id":1,"name":"one"},{"id":2,"name":"two"}]}' | tq -x -t '{{.id}}: {{.name}}' '.users'
   1: one
   2: two
-  
+
   % echo '{}' | tq -e '.colors = ["red", "green"]' -e '.colors += "blue"' .
   {
     "colors": [
@@ -73,7 +73,7 @@ var (
 	isRaw        bool
 	tmplText     string
 	tmpl         *template.Template
-	inputFormat  = format("json")
+	inputFormat  = format("yaml")
 	outputFormat = format("json")
 	editExprs    stringList
 )

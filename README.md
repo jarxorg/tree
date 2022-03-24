@@ -227,7 +227,7 @@ brew install jarxorg/tree/tq
 ### Usage
 
 ```
-tq is a portable command-line JSON/YAML processor.
+tq is a command-line JSON/YAML processor.
 
 Usage:
   tq [flags] [query] ([file...])

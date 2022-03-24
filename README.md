@@ -108,6 +108,52 @@ func main() {
 
 Tree may works on other parsers those has compatible with "encoding/json" or "gopkg.in/yaml.v2". See [examples](examples) directory.
 
+## Alternate json.RawMessage
+
+For example, [Dynamic JSON in Go](https://eagain.net/articles/go-dynamic-json/) shows an example of using json.RawMessage.
+
+It may be simpler to use tree.Map instead of json.RawMessage.
+
+```
+package main
+
+import (
+	"encoding/json"
+	"fmt"
+	"log"
+
+	"github.com/jarxorg/tree"
+)
+
+const input = `
+{
+	"type": "sound",
+	"msg": {
+		"description": "dynamite",
+		"authority": "the Bruce Dickinson"
+	}
+}
+`
+
+type Envelope struct {
+	Type string
+	Msg  tree.Map
+}
+
+func main() {
+	env := Envelope{}
+	if err := json.Unmarshal([]byte(input), &env); err != nil {
+		log.Fatal(err)
+	}
+	fmt.Printf("%#v\n", env)
+	fmt.Printf("%#v\n", env.Msg.Get("description"))
+
+	// Output:
+	// main.Envelope{Type:"sound", Msg:tree.Map{"authority":"the Bruce Dickinson", "description":"dynamite"}}
+	// "dynamite"
+}
+```
+
 ## Query
 
 | Query | Description | Results |

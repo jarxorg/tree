@@ -67,6 +67,7 @@ func (l *stringList) Set(value string) error {
 }
 
 var (
+	isVersion    bool
 	isHelp       bool
 	isExpand     bool
 	isSlurp      bool
@@ -79,6 +80,7 @@ var (
 )
 
 func init() {
+	flag.BoolVar(&isVersion, "v", false, "print version")
 	flag.BoolVar(&isHelp, "h", false, "help for "+cmd)
 	flag.BoolVar(&isExpand, "x", false, "expand results")
 	flag.BoolVar(&isSlurp, "s", false, "slurp all results into an array")
@@ -98,6 +100,10 @@ func init() {
 
 func main() {
 	flag.Parse()
+	if isVersion {
+		fmt.Println(tree.VERSION)
+		return
+	}
 	if isHelp || (flag.Arg(0) == "" && len(editExprs) == 0) {
 		flag.Usage()
 		return

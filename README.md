@@ -108,7 +108,7 @@ func main() {
 
 Tree may works on other parsers those has compatible with "encoding/json" or "gopkg.in/yaml.v2". See [examples](examples) directory.
 
-## Alternate json.RawMessage
+### Alternate json.RawMessage
 
 For example, [Dynamic JSON in Go](https://eagain.net/articles/go-dynamic-json/) shows an example of using json.RawMessage.
 
@@ -237,13 +237,14 @@ Flags:
     	edit expression
   -h	help for tq
   -i value
-    	input format (json or yaml) (default json)
+    	input format (json or yaml) (default yaml)
   -o value
     	output format (json or yaml) (default json)
   -r	output raw strings
   -s	slurp all results into an array
   -t string
     	golang text/template string (ignore -o flag)
+  -v	print version
   -x	expand results
 
 Examples:
@@ -254,12 +255,12 @@ Examples:
   1: one
   2: two
 
-  % echo '{}' | tq -e '.colors = ["Red", "Green"]' -e '.colors += "Blue"' .
+  % echo '{}' | tq -e '.colors = ["red", "green"]' -e '.colors += "blue"' .
   {
     "colors": [
-      "Red",
-      "Green",
-      "Blue"
+      "red",
+      "green",
+      "blue"
     ]
   }
 ```

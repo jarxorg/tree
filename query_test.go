@@ -315,10 +315,11 @@ func Test_ParseQuery_Errors(t *testing.T) {
 // NOTE: Copy from https://github.com/stedolan/jq/wiki/For-JSONPath-users#illustrative-object
 var testStoreJSON = `{
   "store": {
-    "book": [{
+    "book": [
+      {
         "category": "reference",
-				"author": "Nigel Rees",
-				"authors": ["Nigel Rees"],
+        "author": "Nigel Rees",
+        "authors": ["Nigel Rees"],
         "title": "Sayings of the Century",
         "price": 8.95
       },
@@ -428,6 +429,15 @@ func Test_Find(t *testing.T) {
 		}, {
 			expr: `.store.book[].author|[0]`,
 			want: ToNodeValues("Nigel Rees"),
+		}, {
+			expr: `.store..book[.category=="fiction"].title`,
+			want: ToNodeValues("Sword of Honour", "Moby Dick", "The Lord of the Rings"),
+		}, {
+			expr: `..book[.category=="fiction"].title`,
+			want: ToNodeValues("Sword of Honour", "Moby Dick", "The Lord of the Rings"),
+		}, {
+			expr: `..0`,
+			want: []Node{n.Get("store").Get("book").Get(0), StringValue("Nigel Rees")},
 		},
 	}
 	for i, test := range tests {
@@ -602,9 +612,34 @@ func Test_Edit(t *testing.T) {
 			expr:   `[0] delete`,
 			errstr: `cannot delete array with 0`,
 		}, {
-			n:      Array{},
-			expr:   `..name = "number"`,
-			errstr: "syntax error: unsupported edit query: ..name",
+			n: Map{
+				"users": Array{
+					Map{"name": StringValue("one"), "class": StringValue("A")},
+					Map{"name": StringValue("two"), "job": Map{"name": StringValue("engineer")}},
+				},
+			},
+			expr: `..name = "NAME"`,
+			want: Map{
+				"users": Array{
+					Map{"name": StringValue("NAME"), "class": StringValue("A")},
+					Map{"name": StringValue("NAME"), "job": Map{"name": StringValue("NAME")}},
+				},
+			},
+		}, {
+			n: Map{
+				"numbers": Array{
+					NumberValue(1),
+					NumberValue(2),
+				},
+			},
+			expr: `..numbers += 3`,
+			want: Map{
+				"numbers": Array{
+					NumberValue(1),
+					NumberValue(2),
+					NumberValue(3),
+				},
+			},
 		}, {
 			n: Map{
 				"users": Array{
@@ -612,11 +647,25 @@ func Test_Edit(t *testing.T) {
 					Map{"name": StringValue("two"), "class": StringValue("B")},
 				},
 			},
-			expr: `..users[].class = "A"`,
+			expr: `..class delete`,
 			want: Map{
+				"users": Array{
+					Map{"name": StringValue("one")},
+					Map{"name": StringValue("two")},
+				},
+			},
+		}, {
+			n: Map{
 				"users": Array{
 					Map{"name": StringValue("one"), "class": StringValue("A")},
 					Map{"name": StringValue("two"), "class": StringValue("A")},
+				},
+			},
+			expr: `..users[].class = "B"`,
+			want: Map{
+				"users": Array{
+					Map{"name": StringValue("one"), "class": StringValue("B")},
+					Map{"name": StringValue("two"), "class": StringValue("B")},
 				},
 			},
 		}, {
@@ -637,19 +686,19 @@ func Test_Edit(t *testing.T) {
 		err := Edit(&(test.n), test.expr)
 		if test.errstr != "" {
 			if err == nil {
-				t.Fatalf("tests[%d]: no error; want %s", i, test.errstr)
+				t.Fatalf("tests[%d] %s: no error; want %s", i, test.expr, test.errstr)
 			}
 			if err.Error() != test.errstr {
-				t.Errorf("tests[%d]: %s; want %s", i, err.Error(), test.errstr)
+				t.Errorf("tests[%d] %s: %s; want %s", i, test.expr, err.Error(), test.errstr)
 			}
 			continue
 		}
 		if err != nil {
-			t.Fatalf("tests[%d]: %+v", i, err)
+			t.Fatalf("tests[%d] %s: %+v", i, test.expr, err)
 		}
 		got := test.n
 		if !reflect.DeepEqual(got, test.want) {
-			t.Errorf("tests[%d]: returns %#v; want %#v", i, got, test.want)
+			t.Errorf("tests[%d] %s: returns %#v; want %#v", i, test.expr, got, test.want)
 		}
 	}
 }

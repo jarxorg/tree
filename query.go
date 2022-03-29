@@ -316,21 +316,58 @@ func (qs FilterQuery) String() string {
 // WalkQuery is a key of each nodes that implements methods of the Query.
 type WalkQuery string
 
+var _ EditorQuery = (WalkQuery)("")
+
 // Exec walks the specified root node and collects matching nodes using itself as a key.
 func (q WalkQuery) Exec(root Node) ([]Node, error) {
 	key := string(q)
 	var r []Node
-	err := Walk(root, func(n Node, keys []interface{}) error {
+	// NOTE: Walk returns no error.
+	Walk(root, func(n Node, keys []interface{}) error {
 		if n.Has(key) {
 			r = append(r, n.Get(key))
-			return SkipWalk
 		}
 		return nil
 	})
-	if err != nil && err != SkipWalk {
-		return nil, err
-	}
 	return r, nil
+}
+
+func (q WalkQuery) Set(pn *Node, v Node) error {
+	key := string(q)
+	return Walk(*pn, func(n Node, keys []interface{}) error {
+		if n.Has(key) {
+			if en, ok := n.(EditorNode); ok {
+				en.Set(key, v)
+			}
+		}
+		return nil
+	})
+}
+
+func (q WalkQuery) Append(pn *Node, v Node) error {
+	key := string(q)
+	return Walk(*pn, func(n Node, keys []interface{}) error {
+		if n.Has(key) {
+			if nv := n.Get(key); nv != nil {
+				if env, ok := nv.(EditorNode); ok {
+					env.Append(v)
+				}
+			}
+		}
+		return nil
+	})
+}
+
+func (q WalkQuery) Delete(pn *Node) error {
+	key := string(q)
+	return Walk(*pn, func(n Node, keys []interface{}) error {
+		if n.Has(key) {
+			if en, ok := n.(EditorNode); ok {
+				en.Delete(key)
+			}
+		}
+		return nil
+	})
 }
 
 func (q WalkQuery) String() string {

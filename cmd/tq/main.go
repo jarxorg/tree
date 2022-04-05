@@ -2,6 +2,7 @@ package main
 
 import (
 	"encoding/json"
+	"errors"
 	"flag"
 	"fmt"
 	"io"
@@ -9,6 +10,7 @@ import (
 	"strings"
 	"text/template"
 
+	"github.com/jarxorg/io2"
 	"github.com/jarxorg/tree"
 	"golang.org/x/term"
 	"gopkg.in/yaml.v2"
@@ -45,11 +47,8 @@ func (f *format) String() string {
 
 func (f *format) Set(value string) error {
 	switch value {
-	case "json":
-		*f = "json"
-		return nil
-	case "yaml":
-		*f = "yaml"
+	case "json", "yaml":
+		*f = format(value)
 		return nil
 	}
 	return fmt.Errorf("unknown format")
@@ -74,7 +73,7 @@ var (
 	isRaw        bool
 	tmplText     string
 	tmpl         *template.Template
-	inputFormat  = format("yaml")
+	inputFormat  = format("")
 	outputFormat = format("json")
 	editExprs    stringList
 )
@@ -87,7 +86,7 @@ func init() {
 	flag.BoolVar(&isRaw, "r", false, "output raw strings")
 	flag.StringVar(&tmplText, "t", "", "golang text/template string (ignore -o flag)")
 	flag.Var(&inputFormat, "i", "input format (json or yaml)")
-	flag.Var(&outputFormat, "o", "output format (json or yaml)")
+	flag.Var(&outputFormat, "o", "output format (json or yaml, default json)")
 	flag.Var(&editExprs, "e", "edit expression")
 
 	flag.Usage = func() {
@@ -100,25 +99,21 @@ func init() {
 
 func main() {
 	flag.Parse()
-	if isVersion {
-		fmt.Println(tree.VERSION)
-		return
-	}
-	if isHelp || (flag.Arg(0) == "" && len(editExprs) == 0) {
-		flag.Usage()
-		return
-	}
-	handleError(run())
-}
-
-func handleError(err error) {
-	if err != nil {
+	if err := run(); err != nil {
 		fmt.Fprintf(os.Stderr, "Error: %s\n", err)
 		os.Exit(1)
 	}
 }
 
 func run() error {
+	if isVersion {
+		fmt.Println(tree.VERSION)
+		return nil
+	}
+	if isHelp || (flag.Arg(0) == "" && len(editExprs) == 0) {
+		flag.Usage()
+		return nil
+	}
 	if tmplText != "" {
 		var err error
 		tmpl, err = template.New("").Parse(tmplText)
@@ -142,58 +137,108 @@ func run() error {
 	}
 	defer in.Close()
 
-	switch inputFormat {
-	case "yaml":
-		return evaluateYAML(in)
-	}
-	return evaluateJSON(in)
+	return evaluate(in)
 }
 
 type inputReader struct {
-	io.Reader
-	cs []io.Closer
+	io.ReadSeekCloser
 }
 
 func newInputReader(fargs []string) (*inputReader, error) {
 	if len(fargs) == 0 {
-		return &inputReader{Reader: os.Stdin}, nil
+		return newStdinReader()
 	}
-	rs := make([]io.Reader, len(fargs))
-	cs := make([]io.Closer, len(fargs))
+
+	var rs []io.ReadSeekCloser
 	ok := false
 	defer func() {
 		if !ok {
-			for _, c := range cs {
-				if c != nil {
-					c.Close()
-				}
+			for _, r := range rs {
+				r.Close()
 			}
 		}
 	}()
-	for i, farg := range fargs {
+	isYaml := func(f string) bool {
+		return strings.HasSuffix(f, ".yaml") || strings.HasSuffix(f, ".yml")
+	}
+	for _, farg := range fargs {
 		var err error
 		f, err := os.Open(farg)
 		if err != nil {
 			return nil, err
 		}
-		rs[i] = f
-		cs[i] = f
+		if len(rs) > 0 && isYaml(farg) {
+			rs = append(rs, io2.NopReadSeekCloser(strings.NewReader("\n---\n")))
+		}
+		rs = append(rs, f)
+	}
+	mr, err := io2.MultiReadSeekCloser(rs...)
+	if err != nil {
+		return nil, err
 	}
 	ok = true
-	return &inputReader{Reader: io.MultiReader(rs...), cs: cs}, nil
+	return &inputReader{ReadSeekCloser: mr}, nil
 }
 
-func (r *inputReader) Close() error {
-	var errs []error
-	for _, c := range r.cs {
-		if err := c.Close(); err != nil {
-			errs = append(errs, err)
+func newStdinReader() (*inputReader, error) {
+	tmp, err := os.CreateTemp("", "*.stdin")
+	if err != nil {
+		return nil, err
+	}
+	r := io2.DelegateReadSeekCloser(tmp)
+	r.CloseFunc = func() error {
+		_ = tmp.Close()
+		return os.Remove(tmp.Name())
+	}
+	if _, err := io.Copy(tmp, os.Stdin); err != nil {
+		r.Close()
+		return nil, err
+	}
+	if _, err := r.Seek(0, io.SeekStart); err != nil {
+		r.Close()
+		return nil, err
+	}
+	return &inputReader{ReadSeekCloser: r}, nil
+}
+
+func evaluate(in io.ReadSeeker) error {
+	switch inputFormat {
+	case "json":
+		return evaluateJSON(in)
+	case "yaml":
+		return evaluateYAML(in)
+	}
+	fns := []func(io.Reader) error{evaluateJSON, evaluateYAML}
+	var errs []string
+	for i, fn := range fns {
+		if i > 0 {
+			if _, err := in.Seek(0, io.SeekStart); err != nil {
+				return err
+			}
 		}
+		if err := fn(in); err != nil {
+			errs = append(errs, err.Error())
+			if !isDecodeError(err) {
+				break
+			}
+			continue
+		}
+		return nil
 	}
-	if len(errs) > 0 {
-		return errs[0]
-	}
-	return nil
+	return errors.New(strings.Join(errs, "; "))
+}
+
+type decodeError struct {
+	err error
+}
+
+func (e *decodeError) Error() string {
+	return e.err.Error()
+}
+
+func isDecodeError(err error) bool {
+	_, ok := err.(*decodeError)
+	return ok
 }
 
 func evaluateJSON(in io.Reader) error {
@@ -201,9 +246,9 @@ func evaluateJSON(in io.Reader) error {
 	for dec.More() {
 		n, err := tree.DecodeJSON(dec)
 		if err != nil {
-			return err
+			return &decodeError{err}
 		}
-		if err := evaluate(n); err != nil {
+		if err := evaluateNode(n); err != nil {
 			return err
 		}
 	}
@@ -218,16 +263,16 @@ func evaluateYAML(in io.Reader) error {
 			if err == io.EOF {
 				break
 			}
-			return err
+			return &decodeError{err}
 		}
-		if err := evaluate(n); err != nil {
+		if err := evaluateNode(n); err != nil {
 			return err
 		}
 	}
 	return nil
 }
 
-func evaluate(node tree.Node) error {
+func evaluateNode(node tree.Node) error {
 	for _, expr := range editExprs {
 		if err := tree.Edit(&node, expr); err != nil {
 			return err

@@ -523,7 +523,7 @@ var (
 	_ Selector = (*SelectQuery)(nil)
 )
 
-var tokenRegexp = regexp.MustCompile(`"([^"]*)"|(and|or|==|<=|>=|!=|\.\.|[\.\[\]\(\)\|<>:])|(\w+)`)
+var tokenRegexp = regexp.MustCompile(`"([^"]*)"|(and|or|==|<=|>=|!=|~=|\.\.|[\.\[\]\(\)\|<>:])|(\w+)`)
 
 // ParseQuery parses the provided expr to a Query.
 // See https://github.com/jarxorg/tree#Query
@@ -722,7 +722,7 @@ func tokensToSelector(ts []*token, expr string) (Selector, error) {
 				break
 			}
 			switch Operator(t.cmd) {
-			case EQ, GT, GE, LT, LE, NE:
+			case EQ, GT, GE, LT, LE, NE, RE:
 				op = i
 				break GROUP
 			}

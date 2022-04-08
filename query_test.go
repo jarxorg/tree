@@ -438,6 +438,12 @@ func Test_Find(t *testing.T) {
 		}, {
 			expr: `..0`,
 			want: []Node{n.Get("store").Get("book").Get(0), StringValue("Nigel Rees")},
+		}, {
+			expr: `.store.book[.title ~= "^S"].title`,
+			want: ToNodeValues("Sayings of the Century", "Sword of Honour"),
+		}, {
+			expr: `.store.book[.author ~= "^(Evelyn Waugh|Herman Melville)$"].title`,
+			want: ToNodeValues("Sword of Honour", "Moby Dick"),
 		},
 	}
 	for i, test := range tests {

@@ -20,6 +20,8 @@ var (
 	LE Operator = "<="
 	// NE is `!=`
 	NE Operator = "!="
+	// RE is `~=`
+	RE Operator = "~="
 )
 
 // Value provides the accessor of primitive value.
@@ -123,6 +125,9 @@ func (n StringValue) Compare(op Operator, v Value) bool {
 		return sn <= sv
 	case NE:
 		return sn != sv
+	case RE:
+		ok, _ := regexpMatchString(sv, sn)
+		return ok
 	}
 	return false
 }

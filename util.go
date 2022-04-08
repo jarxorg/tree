@@ -3,6 +3,8 @@ package tree
 import (
 	"errors"
 	"fmt"
+	"regexp"
+	"sync"
 )
 
 // ToValue converts the specified v to a Value as Node.
@@ -121,4 +123,33 @@ func walk(n Node, lastKeys []interface{}, fn WalkFunc) error {
 		keys[last] = key
 		return walk(v, keys, fn)
 	})
+}
+
+var regexpPool = sync.Pool{
+	New: func() interface{} {
+		return map[string]*regexp.Regexp{}
+	},
+}
+
+func pooledRegexp(expr string) (*regexp.Regexp, error) {
+	cache := regexpPool.Get().(map[string]*regexp.Regexp)
+	defer regexpPool.Put(cache)
+
+	if re, ok := cache[expr]; ok {
+		return re, nil
+	}
+	re, err := regexp.Compile(expr)
+	if err != nil {
+		return nil, err
+	}
+	cache[expr] = re
+	return re, nil
+}
+
+func regexpMatchString(expr, value string) (bool, error) {
+	re, err := pooledRegexp(expr)
+	if err != nil {
+		return false, err
+	}
+	return re.MatchString(value), nil
 }

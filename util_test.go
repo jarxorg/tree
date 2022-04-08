@@ -129,17 +129,17 @@ func Test_Walk(t *testing.T) {
 	i := 0
 	err := Walk(root, func(n Node, keys []interface{}) error {
 		if i >= len(tests) {
-			t.Fatalf("Error fn is called too many times %d", i)
+			t.Fatalf("fn is called too many times %d", i)
 			return nil
 		}
 		test := tests[i]
 		i++
 
 		if !reflect.DeepEqual(n, test.n) {
-			t.Errorf(`Error walk[%d] returns node %#v; want %#v`, i, n, test.n)
+			t.Errorf(`walk[%d] returns node %#v; want %#v`, i, n, test.n)
 		}
 		if !reflect.DeepEqual(keys, test.keys) {
-			t.Errorf(`Error walk[%d] returns keys %#v; want %#v`, i, keys, test.n)
+			t.Errorf(`walk[%d] returns keys %#v; want %#v`, i, keys, test.n)
 		}
 		if test.skip {
 			return SkipWalk
@@ -151,6 +151,51 @@ func Test_Walk(t *testing.T) {
 	}
 
 	if len(tests) != i {
-		t.Errorf("Error fn is called %d times; want %d", i, len(tests))
+		t.Errorf("fn is called %d times; want %d", i, len(tests))
+	}
+}
+
+func Test_regexpMatchString(t *testing.T) {
+	tests := []struct {
+		expr   string
+		value  string
+		want   bool
+		errstr string
+	}{
+		{
+			expr:  `a`,
+			value: "abc",
+			want:  true,
+		}, {
+			expr:  `^[a-z]+$`,
+			value: "abc",
+			want:  true,
+		}, {
+			expr:  `x`,
+			value: "abc",
+			want:  false,
+		}, {
+			expr:   `(`,
+			value:  "abc",
+			errstr: "error parsing regexp: missing closing ): `(`",
+		},
+	}
+	for i, test := range tests {
+		got, err := regexpMatchString(test.expr, test.value)
+		if test.errstr != "" {
+			if err == nil {
+				t.Fatalf("tests[%d] %q no error", i, test.expr)
+			}
+			if err.Error() != test.errstr {
+				t.Errorf(`tests[%d] %q error %q want %q`, i, test.expr, err.Error(), test.errstr)
+			}
+			continue
+		}
+		if err != nil {
+			t.Fatalf("tests[%d] %q error %q", i, test.expr, err)
+		}
+		if got != test.want {
+			t.Errorf("tests[%d] %q returns %v; want %v", i, test.expr, got, test.want)
+		}
 	}
 }

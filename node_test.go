@@ -87,50 +87,74 @@ func Test_Node(t *testing.T) {
 func Test_Node_Get(t *testing.T) {
 	tests := []struct {
 		n    Node
-		key  interface{}
+		keys []interface{}
 		has  bool
 		want Node
 	}{
 		{
 			n:    Array{StringValue("a"), StringValue("b")},
-			key:  1,
+			keys: []interface{}{1},
 			has:  true,
 			want: StringValue("b"),
 		}, {
 			n:    Array{StringValue("a"), StringValue("b")},
-			key:  "1",
+			keys: []interface{}{"1"},
 			has:  true,
 			want: StringValue("b"),
 		}, {
-			n:   Array{StringValue("a"), StringValue("b")},
-			key: 1.0,
+			n:    Array{StringValue("a"), StringValue("b")},
+			keys: []interface{}{1.0},
 		}, {
-			n:   Array{StringValue("a"), StringValue("b")},
-			key: 2,
+			n:    Array{StringValue("a"), StringValue("b")},
+			keys: []interface{}{2},
 		}, {
-			n:   Array{StringValue("a"), nil},
-			key: 1,
-			has: true,
+			n:    Array{StringValue("a"), nil},
+			keys: []interface{}{1},
+			has:  true,
 		}, {
 			n:    Map{"1": NumberValue(10), "2": NumberValue(20)},
-			key:  "1",
+			keys: []interface{}{"1"},
 			has:  true,
 			want: NumberValue(10),
 		}, {
 			n:    Map{"1": NumberValue(10), "2": NumberValue(20)},
-			key:  1,
+			keys: []interface{}{1},
 			has:  true,
 			want: NumberValue(10),
 		}, {
-			n:   Map{"1": NumberValue(10), "2": NumberValue(20)},
-			key: 1.0,
+			n:    Map{"1": NumberValue(10), "2": NumberValue(20)},
+			keys: []interface{}{1.0},
 		}, {
-			n:   Map{"1": NumberValue(10), "2": NumberValue(20)},
-			key: "3",
+			n:    Map{"1": NumberValue(10), "2": NumberValue(20)},
+			keys: []interface{}{"3"},
 		}, {
-			n:   Map{"1": NumberValue(10), "2": nil},
-			key: "2",
-			has: true,
+			n:    Map{"1": NumberValue(10), "2": nil},
+			keys: []interface{}{"2"},
+			has:  true,
+		}, {
+			n:    Map{"a": Map{"b": StringValue("v")}},
+			keys: []interface{}{"a", "b"},
+			has:  true,
+			want: StringValue("v"),
+		}, {
+			n:    Map{"a": Map{"b": StringValue("v")}},
+			keys: []interface{}{"a", "b", "c", "d"},
+		}, {
+			n:    Map{"a": Map{"b": StringValue("v")}},
+			keys: []interface{}{"a", "c"},
+		}, {
+			n:    Array{Array{nil, StringValue("v")}},
+			keys: []interface{}{0, 1},
+			has:  true,
+			want: StringValue("v"),
+		}, {
+			n:    Array{Array{nil, StringValue("v")}},
+			keys: []interface{}{0, 1, 2, 3},
+		}, {
+			n:    Array{Map{"a": Array{nil, Map{"b": StringValue("v")}}}},
+			keys: []interface{}{0, "a", 1, "b"},
+			has:  true,
+			want: StringValue("v"),
 		}, {
 			n: StringValue("str"),
 		}, {
@@ -140,10 +164,10 @@ func Test_Node_Get(t *testing.T) {
 		},
 	}
 	for i, test := range tests {
-		if test.n.Has(test.key) != test.has {
+		if test.n.Has(test.keys...) != test.has {
 			t.Errorf("tests[%d]: has %v; want %v", i, !test.has, test.has)
 		}
-		got := test.n.Get(test.key)
+		got := test.n.Get(test.keys...)
 		if !reflect.DeepEqual(got, test.want) {
 			t.Errorf("tests[%d]: got %q; want %q", i, got, test.want)
 		}

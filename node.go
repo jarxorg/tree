@@ -11,12 +11,12 @@ type Type int
 
 // These variables are the Node types.
 const (
-	TypeArray Type = iota
-	TypeMap
-	TypeValue
-	TypeStringValue = TypeValue | iota
-	TypeBoolValue
-	TypeNumberValue
+	TypeArray       Type = 0b0001
+	TypeMap         Type = 0b0010
+	TypeValue       Type = 0b0100
+	TypeStringValue Type = 0b0101
+	TypeBoolValue   Type = 0b0110
+	TypeNumberValue Type = 0b0111
 )
 
 // IsArray returns t == TypeArray.
@@ -60,10 +60,10 @@ type Node interface {
 	// Value returns this node as a Value.
 	Value() Value
 	// Has checks this node has key.
-	Has(key interface{}) bool
+	Has(keys ...interface{}) bool
 	// Get returns array/map value that matched by the specified key.
 	// The key type allows int or string.
-	Get(key interface{}) Node
+	Get(keys ...interface{}) Node
 	// Each calls the callback function for each Array|Map values.
 	// If the node type is not Array|Map then the callback called once with nil key and self as value.
 	Each(cb func(key interface{}, v Node) error) error
@@ -123,15 +123,27 @@ func (n Array) toIndex(key interface{}) (int, bool) {
 }
 
 // Has checks this node has key.
-func (n Array) Has(key interface{}) bool {
-	_, ok := n.toIndex(key)
-	return ok
+func (n Array) Has(keys ...interface{}) bool {
+	if len(keys) > 0 {
+		if i, ok := n.toIndex(keys[0]); ok {
+			if len(keys) > 1 {
+				return n[i].Has(keys[1:]...)
+			}
+			return true
+		}
+	}
+	return false
 }
 
 // Get returns an array value as Node.
-func (n Array) Get(key interface{}) Node {
-	if i, ok := n.toIndex(key); ok {
-		return n[i]
+func (n Array) Get(keys ...interface{}) Node {
+	if len(keys) > 0 {
+		if i, ok := n.toIndex(keys[0]); ok {
+			if len(keys) > 1 {
+				return n[i].Get(keys[1:]...)
+			}
+			return n[i]
+		}
 	}
 	return nil
 }
@@ -224,15 +236,27 @@ func (n Map) toKey(key interface{}) (string, bool) {
 }
 
 // Has checks this node has key.
-func (n Map) Has(key interface{}) bool {
-	_, ok := n.toKey(key)
-	return ok
+func (n Map) Has(keys ...interface{}) bool {
+	if len(keys) > 0 {
+		if k, ok := n.toKey(keys[0]); ok {
+			if len(keys) > 1 {
+				return n[k].Has(keys[1:]...)
+			}
+			return true
+		}
+	}
+	return false
 }
 
 // Get returns an array value as Node.
-func (n Map) Get(key interface{}) Node {
-	if k, ok := n.toKey(key); ok {
-		return n[k]
+func (n Map) Get(keys ...interface{}) Node {
+	if len(keys) > 0 {
+		if k, ok := n.toKey(keys[0]); ok {
+			if len(keys) > 1 {
+				return n[k].Get(keys[1:]...)
+			}
+			return n[k]
+		}
 	}
 	return nil
 }
@@ -258,7 +282,7 @@ func (n Map) Values() []Node {
 	return values
 }
 
-// Append appends v to *n.
+// Append returns a error.
 func (n Map) Append(v Node) error {
 	return fmt.Errorf("cannot append to map")
 }

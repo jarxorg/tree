@@ -2,4 +2,4 @@
 package tree
 
 // VERSION is the version number.
-const VERSION = "0.6.0"
+const VERSION = "0.6.1"

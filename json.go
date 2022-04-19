@@ -77,6 +77,11 @@ func (n *Array) UnmarshalJSON(data []byte) error {
 	return err
 }
 
+// MarshalJSON is an implementation of json.Marshaler.
+func (n NilValue) MarshalJSON() ([]byte, error) {
+	return []byte("null"), nil
+}
+
 func jsonMap(dec *json.Decoder, m *Map) error {
 	t, err := dec.Token()
 	if err != nil {

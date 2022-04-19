@@ -126,6 +126,25 @@ Name: Reds
 	// map[Colors:[Crimson Red Ruby Maroon] ID:1 Name:Reds]
 }
 
+func ExampleGet() {
+	group := tree.Map{
+		"ID":     tree.ToValue(1),
+		"Name":   tree.ToValue("Reds"),
+		"Colors": tree.ToArrayValues("Crimson", "Red", "Ruby", "Maroon"),
+		"Nil":    nil,
+	}
+	fmt.Println(group.Get("Colors").Get(1))
+	fmt.Println(group.Get("Colors", 2))
+	fmt.Println(group.Get("Colors").Get(5).IsNil())
+	fmt.Println(group.Get("Nil").IsNil())
+
+	// Output:
+	// Red
+	// Ruby
+	// true
+	// true
+}
+
 func ExampleFind() {
 	group := tree.Map{
 		"ID":     tree.ToValue(1),
@@ -133,16 +152,17 @@ func ExampleFind() {
 		"Colors": tree.ToArrayValues("Crimson", "Red", "Ruby", "Maroon"),
 	}
 
-	rs, err := group.Find(".Colors[1]")
+	rs, err := group.Find(".Colors[1:3]")
 	if err != nil {
 		log.Fatal(err)
 	}
 	for _, r := range rs {
-		fmt.Printf("%#v\n", r)
+		fmt.Println(r)
 	}
 
 	// Output:
-	// "Red"
+	// Red
+	// Ruby
 }
 
 func ExampleEdit() {

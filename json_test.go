@@ -9,12 +9,13 @@ import (
 )
 
 func Test_MarshalJSON(t *testing.T) {
-	want := `{"a":["1",2,true,null]}`
+	want := `{"a":["1",2,true,null,null]}`
 	n := Map{
 		"a": Array{
 			StringValue("1"),
 			NumberValue(2),
 			BoolValue(true),
+			Nil,
 			nil,
 		},
 	}

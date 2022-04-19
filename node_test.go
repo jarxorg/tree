@@ -21,21 +21,35 @@ func Test_Type(t *testing.T) {
 		{typ: TypeValue, is: TypeValue.IsArray, want: false},
 		{typ: TypeValue, is: TypeValue.IsMap, want: false},
 		{typ: TypeValue, is: TypeValue.IsValue, want: true},
+		{typ: TypeValue, is: TypeValue.IsNilValue, want: false},
+		{typ: TypeValue, is: TypeValue.IsStringValue, want: false},
+		{typ: TypeValue, is: TypeValue.IsBoolValue, want: false},
+		{typ: TypeValue, is: TypeValue.IsNumberValue, want: false},
+		{typ: TypeNilValue, is: TypeNilValue.IsArray, want: false},
+		{typ: TypeNilValue, is: TypeNilValue.IsMap, want: false},
+		{typ: TypeNilValue, is: TypeNilValue.IsValue, want: true},
+		{typ: TypeNilValue, is: TypeNilValue.IsNilValue, want: true},
+		{typ: TypeNilValue, is: TypeNilValue.IsStringValue, want: false},
+		{typ: TypeNilValue, is: TypeNilValue.IsBoolValue, want: false},
+		{typ: TypeNilValue, is: TypeNilValue.IsNumberValue, want: false},
 		{typ: TypeStringValue, is: TypeStringValue.IsArray, want: false},
 		{typ: TypeStringValue, is: TypeStringValue.IsMap, want: false},
 		{typ: TypeStringValue, is: TypeStringValue.IsValue, want: true},
+		{typ: TypeStringValue, is: TypeStringValue.IsNilValue, want: false},
 		{typ: TypeStringValue, is: TypeStringValue.IsStringValue, want: true},
 		{typ: TypeStringValue, is: TypeStringValue.IsBoolValue, want: false},
 		{typ: TypeStringValue, is: TypeStringValue.IsNumberValue, want: false},
 		{typ: TypeBoolValue, is: TypeBoolValue.IsArray, want: false},
 		{typ: TypeBoolValue, is: TypeBoolValue.IsMap, want: false},
 		{typ: TypeBoolValue, is: TypeBoolValue.IsValue, want: true},
+		{typ: TypeBoolValue, is: TypeBoolValue.IsNilValue, want: false},
 		{typ: TypeBoolValue, is: TypeBoolValue.IsStringValue, want: false},
 		{typ: TypeBoolValue, is: TypeBoolValue.IsBoolValue, want: true},
 		{typ: TypeBoolValue, is: TypeBoolValue.IsNumberValue, want: false},
 		{typ: TypeNumberValue, is: TypeNumberValue.IsArray, want: false},
 		{typ: TypeNumberValue, is: TypeNumberValue.IsMap, want: false},
 		{typ: TypeNumberValue, is: TypeNumberValue.IsValue, want: true},
+		{typ: TypeNumberValue, is: TypeNumberValue.IsNilValue, want: false},
 		{typ: TypeNumberValue, is: TypeNumberValue.IsStringValue, want: false},
 		{typ: TypeNumberValue, is: TypeNumberValue.IsBoolValue, want: false},
 		{typ: TypeNumberValue, is: TypeNumberValue.IsNumberValue, want: true},
@@ -48,27 +62,72 @@ func Test_Type(t *testing.T) {
 }
 
 func Test_Node(t *testing.T) {
-	a := Array{}
-	m := Map{}
 	tests := []struct {
-		n Node
-		t Type
-		a Array
-		m Map
-		v Value
+		n     Node
+		isNil bool
+		t     Type
+		a     Array
+		m     Map
+		v     Value
 	}{
 		{
-			n: m,
-			t: TypeMap,
-			m: m,
+			n:     Map(nil),
+			isNil: true,
+			t:     TypeMap,
+			m:     Map(nil),
+			a:     Array(nil),
+			v:     Nil,
 		}, {
-			n: a,
+			n: Map{},
+			t: TypeMap,
+			m: Map{},
+			a: Array(nil),
+			v: Nil,
+		}, {
+			n:     Array(nil),
+			isNil: true,
+			t:     TypeArray,
+			m:     Map(nil),
+			a:     Array(nil),
+			v:     Nil,
+		}, {
+			n: Array{},
 			t: TypeArray,
-			a: a,
+			m: Map(nil),
+			a: Array{},
+			v: Nil,
+		}, {
+			n:     Nil,
+			isNil: true,
+			t:     TypeNilValue,
+			m:     Map(nil),
+			a:     Array(nil),
+			v:     Nil,
+		}, {
+			n: StringValue("a"),
+			t: TypeStringValue,
+			m: Map(nil),
+			a: Array(nil),
+			v: StringValue("a"),
+		}, {
+			n: BoolValue(true),
+			t: TypeBoolValue,
+			m: Map(nil),
+			a: Array(nil),
+			v: BoolValue(true),
+		}, {
+			n: NumberValue(1),
+			t: TypeNumberValue,
+			m: Map(nil),
+			a: Array(nil),
+			v: NumberValue(1),
 		},
 	}
 	for i, test := range tests {
 		n := test.n
+		if n.IsNil() != test.isNil {
+			t.Errorf(`tests[%d]: IsNil returns %v; want %v`, i, n.IsNil(), test.isNil)
+		}
 		if tt := n.Type(); tt != test.t {
 			t.Errorf(`tests[%d]: Type returns %v; want %v`, i, tt, test.t)
 		}
@@ -87,63 +146,99 @@ func Test_Node(t *testing.T) {
 func Test_Node_Get(t *testing.T) {
 	tests := []struct {
 		n    Node
-		key  interface{}
+		keys []interface{}
 		has  bool
 		want Node
 	}{
 		{
 			n:    Array{StringValue("a"), StringValue("b")},
-			key:  1,
+			keys: []interface{}{1},
 			has:  true,
 			want: StringValue("b"),
 		}, {
 			n:    Array{StringValue("a"), StringValue("b")},
-			key:  "1",
+			keys: []interface{}{"1"},
 			has:  true,
 			want: StringValue("b"),
 		}, {
-			n:   Array{StringValue("a"), StringValue("b")},
-			key: 1.0,
+			n:    Array{StringValue("a"), StringValue("b")},
+			keys: []interface{}{1.0},
+			want: Nil,
 		}, {
-			n:   Array{StringValue("a"), StringValue("b")},
-			key: 2,
+			n:    Array{StringValue("a"), StringValue("b")},
+			keys: []interface{}{2},
+			want: Nil,
 		}, {
-			n:   Array{StringValue("a"), nil},
-			key: 1,
-			has: true,
+			n:    Array{StringValue("a"), nil},
+			keys: []interface{}{1},
+			has:  true,
+			want: Nil,
 		}, {
 			n:    Map{"1": NumberValue(10), "2": NumberValue(20)},
-			key:  "1",
+			keys: []interface{}{"1"},
 			has:  true,
 			want: NumberValue(10),
 		}, {
 			n:    Map{"1": NumberValue(10), "2": NumberValue(20)},
-			key:  1,
+			keys: []interface{}{1},
 			has:  true,
 			want: NumberValue(10),
 		}, {
-			n:   Map{"1": NumberValue(10), "2": NumberValue(20)},
-			key: 1.0,
+			n:    Map{"1": NumberValue(10), "2": NumberValue(20)},
+			keys: []interface{}{1.0},
+			want: Nil,
 		}, {
-			n:   Map{"1": NumberValue(10), "2": NumberValue(20)},
-			key: "3",
+			n:    Map{"1": NumberValue(10), "2": NumberValue(20)},
+			keys: []interface{}{"3"},
+			want: Nil,
 		}, {
-			n:   Map{"1": NumberValue(10), "2": nil},
-			key: "2",
-			has: true,
+			n:    Map{"1": NumberValue(10), "2": nil},
+			keys: []interface{}{"2"},
+			has:  true,
+			want: Nil,
 		}, {
-			n: StringValue("str"),
+			n:    Map{"a": Map{"b": StringValue("v")}},
+			keys: []interface{}{"a", "b"},
+			has:  true,
+			want: StringValue("v"),
 		}, {
-			n: BoolValue(true),
+			n:    Map{"a": Map{"b": StringValue("v")}},
+			keys: []interface{}{"a", "b", "c", "d"},
+			want: Nil,
 		}, {
-			n: NumberValue(1),
+			n:    Map{"a": Map{"b": StringValue("v")}},
+			keys: []interface{}{"a", "c"},
+			want: Nil,
+		}, {
+			n:    Array{Array{nil, StringValue("v")}},
+			keys: []interface{}{0, 1},
+			has:  true,
+			want: StringValue("v"),
+		}, {
+			n:    Array{Array{nil, StringValue("v")}},
+			keys: []interface{}{0, 1, 2, 3},
+			want: Nil,
+		}, {
+			n:    Array{Map{"a": Array{nil, Map{"b": StringValue("v")}}}},
+			keys: []interface{}{0, "a", 1, "b"},
+			has:  true,
+			want: StringValue("v"),
+		}, {
+			n:    StringValue("str"),
+			want: Nil,
+		}, {
+			n:    BoolValue(true),
+			want: Nil,
+		}, {
+			n:    NumberValue(1),
+			want: Nil,
 		},
 	}
 	for i, test := range tests {
-		if test.n.Has(test.key) != test.has {
+		if test.n.Has(test.keys...) != test.has {
 			t.Errorf("tests[%d]: has %v; want %v", i, !test.has, test.has)
 		}
-		got := test.n.Get(test.key)
+		got := test.n.Get(test.keys...)
 		if !reflect.DeepEqual(got, test.want) {
 			t.Errorf("tests[%d]: got %q; want %q", i, got, test.want)
 		}

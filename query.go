@@ -757,12 +757,13 @@ func Find(n Node, expr string) ([]Node, error) {
 
 type arrayHolder struct{ a *Array }
 
+func (h *arrayHolder) IsNil() bool                                       { return h.a.IsNil() }
 func (h *arrayHolder) Type() Type                                        { return h.a.Type() }
 func (h *arrayHolder) Array() Array                                      { return *h.a }
 func (h *arrayHolder) Map() Map                                          { return h.a.Map() }
 func (h *arrayHolder) Value() Value                                      { return h.a.Value() }
-func (h *arrayHolder) Has(key interface{}) bool                          { return h.a.Has(key) }
-func (h *arrayHolder) Get(key interface{}) Node                          { return h.a.Get(key) }
+func (h *arrayHolder) Has(keys ...interface{}) bool                      { return h.a.Has(keys...) }
+func (h *arrayHolder) Get(keys ...interface{}) Node                      { return h.a.Get(keys...) }
 func (h *arrayHolder) Each(cb func(key interface{}, v Node) error) error { return h.a.Each(cb) }
 func (h *arrayHolder) Find(expr string) ([]Node, error)                  { return h.a.Find(expr) }
 func (h *arrayHolder) Delete(key interface{}) error                      { return h.a.Delete(key) }
@@ -871,9 +872,6 @@ func execForEdit(pn *Node, fq FilterQuery, op string, v Node) error {
 
 	q := fq[l-1]
 	for _, n := range nn {
-		if n == nil {
-			return fmt.Errorf("runtime error: nil")
-		}
 		if err := editQuery(&n, q, op, v); err != nil {
 			return err
 		}

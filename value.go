@@ -35,10 +35,103 @@ type Value interface {
 	Compare(op Operator, v Value) bool
 }
 
+type NilValue struct{}
+
+var (
+	_   = (*NilValue)(nil)
+	Nil = NilValue{}
+)
+
+// IsNil returns true if this node is nil.
+func (n NilValue) IsNil() bool {
+	return true
+}
+
+// Type returns TypeValue.
+func (n NilValue) Type() Type {
+	return TypeNilValue
+}
+
+// Array returns nil.
+func (n NilValue) Array() Array {
+	return nil
+}
+
+// Map returns nil.
+func (n NilValue) Map() Map {
+	return nil
+}
+
+// Value returns this.
+func (n NilValue) Value() Value {
+	return n
+}
+
+// Has returns false.
+func (n NilValue) Has(keys ...interface{}) bool {
+	return false
+}
+
+// Get returns nil.
+func (n NilValue) Get(keys ...interface{}) Node {
+	return n
+}
+
+// Each calls cb(nil, n).
+func (n NilValue) Each(cb func(key interface{}, n Node) error) error {
+	return cb(nil, n)
+}
+
+// Find finds a node using the query expression.
+func (n NilValue) Find(expr string) ([]Node, error) {
+	return Find(n, expr)
+}
+
+// Bool returns false.
+func (n NilValue) Bool() bool {
+	return false
+}
+
+// Int returns 0.
+func (n NilValue) Int() int {
+	return 0
+}
+
+// Int64 returns 0.
+func (n NilValue) Int64() int64 {
+	return 0
+}
+
+// Float64 returns 0.
+func (n NilValue) Float64() float64 {
+	return 0
+}
+
+// String returns this as string.
+func (n NilValue) String() string {
+	return ""
+}
+
+// Compare compares n and v.
+func (n NilValue) Compare(op Operator, v Value) bool {
+	switch op {
+	case EQ:
+		return v == nil || v.Type().IsNilValue()
+	case NE:
+		return v != nil && !v.Type().IsNilValue()
+	}
+	return false
+}
+
 // A StringValue represents a string value.
 type StringValue string
 
-var _ Node = StringValue("")
+var _ Value = StringValue("")
+
+// IsNil returns true if this node is nil.
+func (n StringValue) IsNil() bool {
+	return false
+}
 
 // Type returns TypeValue.
 func (n StringValue) Type() Type {
@@ -67,7 +160,7 @@ func (n StringValue) Has(keys ...interface{}) bool {
 
 // Get returns nil.
 func (n StringValue) Get(keys ...interface{}) Node {
-	return nil
+	return Nil
 }
 
 // Each calls cb(nil, n).
@@ -135,7 +228,12 @@ func (n StringValue) Compare(op Operator, v Value) bool {
 // A BoolValue represents a bool value.
 type BoolValue bool
 
-var _ Node = BoolValue(false)
+var _ Value = BoolValue(false)
+
+// IsNil returns true if this node is nil.
+func (n BoolValue) IsNil() bool {
+	return false
+}
 
 // Type returns TypeValue.
 func (n BoolValue) Type() Type {
@@ -164,7 +262,7 @@ func (n BoolValue) Has(keys ...interface{}) bool {
 
 // Get returns nil.
 func (n BoolValue) Get(keys ...interface{}) Node {
-	return nil
+	return Nil
 }
 
 // Each calls cb(nil, n).
@@ -219,7 +317,12 @@ func (n BoolValue) Compare(op Operator, v Value) bool {
 // A NumberValue represents an number value.
 type NumberValue float64
 
-var _ Node = NumberValue(0)
+var _ Value = NumberValue(0)
+
+// IsNil returns true if this node is nil.
+func (n NumberValue) IsNil() bool {
+	return false
+}
 
 // Type returns TypeValue.
 func (n NumberValue) Type() Type {
@@ -248,7 +351,7 @@ func (n NumberValue) Has(keys ...interface{}) bool {
 
 // Get returns nil.
 func (n NumberValue) Get(keys ...interface{}) Node {
-	return nil
+	return Nil
 }
 
 // Each calls cb(nil, n).

@@ -757,6 +757,7 @@ func Find(n Node, expr string) ([]Node, error) {
 
 type arrayHolder struct{ a *Array }
 
+func (h *arrayHolder) IsNil() bool                                       { return h.a.IsNil() }
 func (h *arrayHolder) Type() Type                                        { return h.a.Type() }
 func (h *arrayHolder) Array() Array                                      { return *h.a }
 func (h *arrayHolder) Map() Map                                          { return h.a.Map() }
@@ -871,9 +872,6 @@ func execForEdit(pn *Node, fq FilterQuery, op string, v Node) error {
 
 	q := fq[l-1]
 	for _, n := range nn {
-		if n == nil {
-			return fmt.Errorf("runtime error: nil")
-		}
 		if err := editQuery(&n, q, op, v); err != nil {
 			return err
 		}

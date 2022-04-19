@@ -13,10 +13,11 @@ type Type int
 const (
 	TypeArray       Type = 0b0001
 	TypeMap         Type = 0b0010
-	TypeValue       Type = 0b0100
-	TypeStringValue Type = 0b0101
-	TypeBoolValue   Type = 0b0110
-	TypeNumberValue Type = 0b0111
+	TypeValue       Type = 0b1000
+	TypeNilValue    Type = 0b1001
+	TypeStringValue Type = 0b1010
+	TypeBoolValue   Type = 0b1011
+	TypeNumberValue Type = 0b1100
 )
 
 // IsArray returns t == TypeArray.
@@ -32,6 +33,11 @@ func (t Type) IsMap() bool {
 // IsValue returns true if t is TypeStringValue or TypeBoolValue or TypeNumberValue.
 func (t Type) IsValue() bool {
 	return t&TypeValue != 0
+}
+
+// IsNilValue returns t == TypeNilValue.
+func (t Type) IsNilValue() bool {
+	return t == TypeNilValue
 }
 
 // IsStringValue returns t == TypeStringValue.
@@ -51,18 +57,24 @@ func (t Type) IsNumberValue() bool {
 
 // A Node is an element on the tree.
 type Node interface {
+	// IsNil returns true if this node is nil.
+	IsNil() bool
 	// Type returns this node type.
 	Type() Type
 	// Array returns this node as an Array.
+	// If this type is not Array, returns a Array(nil).
 	Array() Array
 	// Map returns this node as a Map.
+	// If this type is not Map, returns a Map(nil).
 	Map() Map
 	// Value returns this node as a Value.
+	// If this type is not Value, returns a NilValue.
 	Value() Value
 	// Has checks this node has key.
 	Has(keys ...interface{}) bool
 	// Get returns array/map value that matched by the specified key.
 	// The key type allows int or string.
+	// If the specified keys does not match, returns NilValue.
 	Get(keys ...interface{}) Node
 	// Each calls the callback function for each Array|Map values.
 	// If the node type is not Array|Map then the callback called once with nil key and self as value.
@@ -87,6 +99,11 @@ var (
 	_ EditorNode = (*Array)(nil)
 )
 
+// IsNil returns true if this node is nil.
+func (n Array) IsNil() bool {
+	return n == nil
+}
+
 // Type returns TypeArray.
 func (n Array) Type() Type {
 	return TypeArray
@@ -104,7 +121,7 @@ func (n Array) Map() Map {
 
 // Value returns nil.
 func (n Array) Value() Value {
-	return nil
+	return Nil
 }
 
 func (n Array) toIndex(key interface{}) (int, bool) {
@@ -142,10 +159,13 @@ func (n Array) Get(keys ...interface{}) Node {
 			if len(keys) > 1 {
 				return n[i].Get(keys[1:]...)
 			}
+			if n[i] == nil {
+				return Nil
+			}
 			return n[i]
 		}
 	}
-	return nil
+	return Nil
 }
 
 // Each calls the callback function for each Array values.
@@ -202,6 +222,11 @@ type Map map[string]Node
 
 var _ EditorNode = (Map)(nil)
 
+// IsNil returns true if this node is nil.
+func (n Map) IsNil() bool {
+	return n == nil
+}
+
 // Type returns TypeMap.
 func (n Map) Type() Type {
 	return TypeMap
@@ -219,7 +244,7 @@ func (n Map) Map() Map {
 
 // Value returns nil.
 func (n Map) Value() Value {
-	return nil
+	return Nil
 }
 
 func (n Map) toKey(key interface{}) (string, bool) {
@@ -255,10 +280,13 @@ func (n Map) Get(keys ...interface{}) Node {
 			if len(keys) > 1 {
 				return n[k].Get(keys[1:]...)
 			}
+			if n[k] == nil {
+				return Nil
+			}
 			return n[k]
 		}
 	}
-	return nil
+	return Nil
 }
 
 // Keys returns sorted keys of the map.

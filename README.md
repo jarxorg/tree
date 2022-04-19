@@ -59,6 +59,11 @@ func main() {
 		"Name":   tree.ToValue("Reds"),
 		"Colors": tree.ToArrayValues("Crimson", "Red", "Ruby", "Maroon"),
 	}
+	// NOTE: Get chain
+	fmt.Println(group.Get("Colors").Get(1))
+	fmt.Println()
+
+	// NOTE: Output JSON
 	j, err := json.Marshal(group)
 	if err != nil {
 		log.Fatal(err)
@@ -66,6 +71,7 @@ func main() {
 	fmt.Println(string(j))
 	fmt.Println()
 
+	// NOTE: Output YAML
 	y, err := yaml.Marshal(group)
 	if err != nil {
 		log.Fatal(err)
@@ -73,6 +79,7 @@ func main() {
 	fmt.Print(string(y))
 	fmt.Println()
 
+	// NOTE: Unmarshal JSON
 	var n tree.Map
 	if err := json.Unmarshal(j, &n); err != nil {
 		log.Fatal(err)
@@ -80,6 +87,7 @@ func main() {
 	fmt.Printf("%#v\n", n)
 	fmt.Println()
 
+	// NOTE: Find
 	r, err := tree.Find(n, ".Colors[1]")
 	if err != nil {
 		log.Fatal(err)
@@ -88,6 +96,8 @@ func main() {
 	fmt.Println()
 
 	// Output:
+	// Red
+	//
 	// {"Colors":["Crimson","Red","Ruby","Maroon"],"ID":1,"Name":"Reds"}
 	//
 	// Colors:

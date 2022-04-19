@@ -54,3 +54,8 @@ func (n *Array) UnmarshalYAML(unmarshal func(interface{}) error) error {
 	})
 	return nil
 }
+
+// MarshalYAML is an implementation of yaml.Marshaler.
+func (n NilValue) MarshalYAML() (interface{}, error) {
+	return nil, nil
+}

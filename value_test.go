@@ -15,6 +15,8 @@ func Test_Value(t *testing.T) {
 		s     string
 	}{
 		{
+			value: Nil,
+		}, {
 			value: StringValue("test"),
 			s:     "test",
 		}, {

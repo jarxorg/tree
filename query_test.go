@@ -508,6 +508,10 @@ func Test_Edit(t *testing.T) {
 			want: Map{"store": Map{}},
 		}, {
 			n:    Map{},
+			expr: `.store={}`, // NOTE: trim spaces
+			want: Map{"store": Map{}},
+		}, {
+			n:    Map{},
 			expr: `.store.book = {}`,
 			want: Map{"store": Map{"book": Map{}}},
 		}, {
@@ -570,6 +574,10 @@ func Test_Edit(t *testing.T) {
 			expr: `.colors += "red"`,
 			want: Map{"colors": Array{StringValue("red")}},
 		}, {
+			n:    Map{},
+			expr: `.colors+="red"`, // NOTE: trime spaces
+			want: Map{"colors": Array{StringValue("red")}},
+		}, {
 			n:    Map{"colors": Array{StringValue("red"), StringValue("green")}},
 			expr: `.colors += "blue"`,
 			want: Map{"colors": Array{StringValue("red"), StringValue("green"), StringValue("blue")}},
@@ -595,27 +603,31 @@ func Test_Edit(t *testing.T) {
 			want: Array{StringValue("red")},
 		}, {
 			n:    Map{"key1": StringValue("value1"), "key2": StringValue("value2")},
-			expr: `.key1 delete`,
+			expr: `.key1 ^?`,
+			want: Map{"key2": StringValue("value2")},
+		}, {
+			n:    Map{"key1": StringValue("value1"), "key2": StringValue("value2")},
+			expr: `.key1^?`, // NOTE: trim spaces
 			want: Map{"key2": StringValue("value2")},
 		}, {
 			n:    Array{StringValue("red")},
-			expr: `[0] delete`,
+			expr: `[0] ^?`,
 			want: Array{},
 		}, {
 			n:    Array{StringValue("red")},
-			expr: `.0 delete`,
+			expr: `.0 ^?`,
 			want: Array{},
 		}, {
 			n:      Map{},
-			expr:   `. delete`,
+			expr:   `. ^?`,
 			errstr: "cannot delete .",
 		}, {
 			n:      StringValue("str"),
-			expr:   `.key delete`,
+			expr:   `.key ^?`,
 			errstr: `cannot delete "key"`,
 		}, {
 			n:      StringValue("str"),
-			expr:   `[0] delete`,
+			expr:   `[0] ^?`,
 			errstr: `cannot delete array with 0`,
 		}, {
 			n: Map{
@@ -653,7 +665,7 @@ func Test_Edit(t *testing.T) {
 					Map{"name": StringValue("two"), "class": StringValue("B")},
 				},
 			},
-			expr: `..class delete`,
+			expr: `..class ^?`,
 			want: Map{
 				"users": Array{
 					Map{"name": StringValue("one")},
@@ -671,6 +683,34 @@ func Test_Edit(t *testing.T) {
 			want: Map{
 				"users": Array{
 					Map{"name": StringValue("one"), "class": StringValue("B")},
+					Map{"name": StringValue("two"), "class": StringValue("B")},
+				},
+			},
+		}, {
+			n: Map{
+				"users": Array{
+					Map{"name": StringValue("one"), "class": StringValue("A")},
+					Map{"name": StringValue("two"), "class": StringValue("A")},
+				},
+			},
+			expr: `..users[.name == "two"].class = "B"`,
+			want: Map{
+				"users": Array{
+					Map{"name": StringValue("one"), "class": StringValue("A")},
+					Map{"name": StringValue("two"), "class": StringValue("B")},
+				},
+			},
+		}, {
+			n: Map{
+				"users": Array{
+					Map{"name": StringValue("one"), "class": StringValue("A")},
+					Map{"name": StringValue("two"), "class": StringValue("A")},
+				},
+			},
+			expr: `..users[.name=="two"].class="B"`, // NOTE: trim spaces
+			want: Map{
+				"users": Array{
+					Map{"name": StringValue("one"), "class": StringValue("A")},
 					Map{"name": StringValue("two"), "class": StringValue("B")},
 				},
 			},

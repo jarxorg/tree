@@ -172,12 +172,27 @@ func ExampleEdit() {
 		"Colors": tree.ToArrayValues("Crimson", "Red", "Ruby", "Maroon"),
 	}
 
-	err := tree.Edit(&group, ".Colors += \"Pink\"")
-	if err != nil {
+	if err := tree.Edit(&group, ".Colors += \"Pink\""); err != nil {
 		log.Fatal(err)
 	}
-	fmt.Printf("%+v\n", group)
+	fmt.Printf("Append Pink to Colors:\n  %+v\n", group)
+
+	if err := tree.Edit(&group, ".Name = \"Blue\""); err != nil {
+		log.Fatal(err)
+	}
+	fmt.Printf("Set Blue to Name:\n  %+v\n", group)
+
+	if err := tree.Edit(&group, ".Colors ^?"); err != nil {
+		log.Fatal(err)
+	}
+	fmt.Printf("Delete Colors:\n  %+v\n", group)
 
 	// Output:
-	// map[Colors:[Crimson Red Ruby Maroon Pink] ID:1 Name:Reds]
+	// Append Pink to Colors:
+	//   map[Colors:[Crimson Red Ruby Maroon Pink] ID:1 Name:Reds]
+	// Set Blue to Name:
+	//   map[Colors:[Crimson Red Ruby Maroon Pink] ID:1 Name:Blue]
+	// Delete Colors:
+	//   map[ID:1 Name:Blue]
+
 }

@@ -2,7 +2,6 @@ package tree
 
 import (
 	"bytes"
-	"log"
 	"reflect"
 	"testing"
 
@@ -28,7 +27,7 @@ func Test_MarshalYAML(t *testing.T) {
 	}
 	got, err := MarshalYAML(n)
 	if err != nil {
-		log.Fatal(err)
+		t.Fatal(err)
 	}
 	if string(got) != want {
 		t.Errorf(`Error %#v marshaled %s; want %s`, n, string(got), want)
@@ -50,7 +49,7 @@ func Test_Map_MarshalYAML(t *testing.T) {
 	}
 	got, err := yaml.Marshal(n)
 	if err != nil {
-		log.Fatal(err)
+		t.Fatal(err)
 	}
 	if string(got) != want {
 		t.Errorf(`Error %#v marshaled %s; want %s`, n, string(got), want)
@@ -69,7 +68,7 @@ func Test_Array_MarshalYAML(t *testing.T) {
 	}
 	got, err := yaml.Marshal(n)
 	if err != nil {
-		log.Fatal(err)
+		t.Fatal(err)
 	}
 	if string(got) != want {
 		t.Errorf(`Error %#v marshaled %s; want %s`, n, string(got), want)
@@ -159,7 +158,7 @@ e: {"x":"x"}
 	for _, test := range tests {
 		got, err := UnmarshalYAML(test.data)
 		if err != nil {
-			log.Fatal(err)
+			t.Fatal(err)
 		}
 		if !reflect.DeepEqual(got, test.want) {
 			t.Errorf(`Error unmarshaled %#v; want %#v`, got, test.want)
@@ -179,7 +178,7 @@ c: null
 `)
 	var got Map
 	if err := yaml.Unmarshal(data, &got); err != nil {
-		log.Fatal(err)
+		t.Fatal(err)
 	}
 	if !reflect.DeepEqual(got, want) {
 		t.Errorf(`Error unmarshaled %#v; want %#v`, got, want)
@@ -198,7 +197,7 @@ func Test_Array_UnmarshalYAML(t *testing.T) {
 `)
 	got := Array{}
 	if err := yaml.Unmarshal(data, &got); err != nil {
-		log.Fatal(err)
+		t.Fatal(err)
 	}
 	if !reflect.DeepEqual(got, want) {
 		t.Errorf(`Error unmarshaled %#v; want %#v`, got, want)

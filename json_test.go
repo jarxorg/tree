@@ -3,7 +3,6 @@ package tree
 import (
 	"bytes"
 	"encoding/json"
-	"log"
 	"reflect"
 	"testing"
 )
@@ -21,7 +20,7 @@ func Test_MarshalJSON(t *testing.T) {
 	}
 	got, err := MarshalJSON(n)
 	if err != nil {
-		log.Fatal(err)
+		t.Fatal(err)
 	}
 	if string(got) != want {
 		t.Errorf(`Error %#v marshaled %s; want %s`, n, string(got), want)
@@ -39,7 +38,7 @@ func Test_Map_MarshalJSON(t *testing.T) {
 	}
 	got, err := json.Marshal(n)
 	if err != nil {
-		log.Fatal(err)
+		t.Fatal(err)
 	}
 	if string(got) != want {
 		t.Errorf(`Error %#v marshaled %s; want %s`, n, string(got), want)
@@ -55,7 +54,7 @@ func Test_Array_MarshalJSON(t *testing.T) {
 	}
 	got, err := json.Marshal(n)
 	if err != nil {
-		log.Fatal(err)
+		t.Fatal(err)
 	}
 	if string(got) != want {
 		t.Errorf(`Error %#v marshaled %s; want %s`, n, string(got), want)
@@ -146,7 +145,7 @@ func Test_UnmarshalJSON(t *testing.T) {
 	for _, test := range tests {
 		got, err := UnmarshalJSON([]byte(test.data))
 		if err != nil {
-			log.Fatal(err)
+			t.Fatal(err)
 		}
 		if !reflect.DeepEqual(got, test.want) {
 			t.Errorf(`Error unmarshaled %#v; want %#v`, got, test.want)
@@ -163,7 +162,7 @@ func Test_Map_UnmarshalJSON(t *testing.T) {
 	data := []byte(`{"a":1,"b":true,"c":null}`)
 	var got Map
 	if err := json.Unmarshal(data, &got); err != nil {
-		log.Fatal(err)
+		t.Fatal(err)
 	}
 	if !reflect.DeepEqual(got, want) {
 		t.Errorf(`Error unmarshaled %#v; want %#v`, got, want)
@@ -179,7 +178,7 @@ func Test_Array_UnmarshalJSON(t *testing.T) {
 	data := []byte(`["1",2,true]`)
 	got := Array{}
 	if err := json.Unmarshal(data, &got); err != nil {
-		log.Fatal(err)
+		t.Fatal(err)
 	}
 	if !reflect.DeepEqual(got, want) {
 		t.Errorf(`Error unmarshaled %#v; want %#v`, got, want)

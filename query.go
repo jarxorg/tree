@@ -817,14 +817,17 @@ func unholdArray(pn *Node) {
 	}
 }
 
-var editRegexp = regexp.MustCompile(`(.+) (=|\+=|set|append|add|delete|del) ?(.*)`)
+var editRegexp = regexp.MustCompile(`^([^\+]+) ?((=|\+=) ?(.+)|(\^\?))$`)
 
 func Edit(pn *Node, expr string) error {
 	ms := editRegexp.FindStringSubmatch(expr)
-	if len(ms) != 4 {
-		return fmt.Errorf("syntax error: invalid edit expression %q", expr)
+	if len(ms) != 6 {
+		return fmt.Errorf("syntax error: invalid edit expression %q, %v", expr, ms)
 	}
-	left, op, right := ms[1], ms[2], ms[3]
+	left, op, right := ms[1], ms[3], ms[4]
+	if op == "" {
+		op = ms[5]
+	}
 
 	var v Node
 	if right != "" {
@@ -881,12 +884,12 @@ func execForEdit(pn *Node, fq FilterQuery, op string, v Node) error {
 
 func execEdit(pn *Node, eq EditorQuery, op string, v Node) error {
 	switch op {
-	case "=", "set":
+	case "=":
 		return eq.Set(pn, v)
-	case "delete", "del":
-		return eq.Delete(pn)
-	case "+=", "append":
+	case "+=":
 		return eq.Append(pn, v)
+	case "^?":
+		return eq.Delete(pn)
 	}
 	return fmt.Errorf("syntax error: unsupported edit operation %q", op)
 }

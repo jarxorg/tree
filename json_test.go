@@ -184,3 +184,81 @@ func Test_Array_UnmarshalJSON(t *testing.T) {
 		t.Errorf(`Error unmarshaled %#v; want %#v`, got, want)
 	}
 }
+
+func Test_MarshalViaJSON(t *testing.T) {
+	tests := []struct {
+		v    interface{}
+		want Node
+	}{
+		{
+			v: struct {
+				ID     int      `json:"id"`
+				Name   string   `json:"name"`
+				Colors []string `json:"colors"`
+			}{
+				ID:     1,
+				Name:   "Reds",
+				Colors: []string{"Crimson", "Red", "Ruby", "Maroon"},
+			},
+			want: Map{
+				"id":     ToValue(1),
+				"name":   ToValue("Reds"),
+				"colors": ToArrayValues("Crimson", "Red", "Ruby", "Maroon"),
+			},
+		}, {
+			v:    "str",
+			want: StringValue("str"),
+		}, {
+			v:    true,
+			want: BoolValue(true),
+		}, {
+			v:    1,
+			want: NumberValue(1),
+		}, {
+			v:    nil,
+			want: Nil,
+		}, {
+			v:    BoolValue(true),
+			want: BoolValue(true),
+		},
+	}
+
+	for i, test := range tests {
+		got, err := MarshalViaJSON(test.v)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if !reflect.DeepEqual(got, test.want) {
+			t.Errorf("tests[%d] failed to marshal via json %#v; want %#v", i, got, test.want)
+		}
+	}
+}
+
+func Test_UnmarshalViaJSON(t *testing.T) {
+	m := Map{
+		"id":     ToValue(1),
+		"name":   ToValue("Reds"),
+		"colors": ToArrayValues("Crimson", "Red", "Ruby", "Maroon"),
+	}
+	v := []struct {
+		ID     int      `json:"id"`
+		Name   string   `json:"name"`
+		Colors []string `json:"colors"`
+	}{
+		{},
+		{
+			ID:     1,
+			Name:   "Reds",
+			Colors: []string{"Crimson", "Red", "Ruby", "Maroon"},
+		},
+	}
+	got := v[0]
+	want := v[1]
+
+	if err := UnmarshalViaJSON(m, &got); err != nil {
+		t.Fatal(err)
+	}
+	if !reflect.DeepEqual(got, want) {
+		t.Errorf("failed to unmarshal via json %#v; want %#v", got, want)
+	}
+}

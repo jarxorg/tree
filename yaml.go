@@ -59,3 +59,27 @@ func (n *Array) UnmarshalYAML(unmarshal func(interface{}) error) error {
 func (n NilValue) MarshalYAML() (interface{}, error) {
 	return nil, nil
 }
+
+// MarshalViaYAML returns the node encoding of v via "gopkg.in/yaml.v2".
+func MarshalViaYAML(v interface{}) (Node, error) {
+	if v == nil {
+		return Nil, nil
+	}
+	if n, ok := v.(Node); ok {
+		return n, nil
+	}
+	data, err := yaml.Marshal(v)
+	if err != nil {
+		return nil, err
+	}
+	return UnmarshalYAML(data)
+}
+
+// UnmarshalViaYAML stores the node in the value pointed to by v via "gopkg.in/yaml.v2".
+func UnmarshalViaYAML(n Node, v interface{}) error {
+	data, err := MarshalYAML(n)
+	if err != nil {
+		return err
+	}
+	return yaml.Unmarshal(data, v)
+}

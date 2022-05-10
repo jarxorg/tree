@@ -166,3 +166,28 @@ func jsonValue(t json.Token) Node {
 	}
 	return StringValue(fmt.Sprintf("%#v", t))
 }
+
+// MarshalViaJSON returns the node encoding of v via "encoding/json".
+func MarshalViaJSON(v interface{}) (Node, error) {
+	if v == nil {
+		return Nil, nil
+	}
+	if n, ok := v.(Node); ok {
+		return n, nil
+	}
+	data, err := json.Marshal(v)
+	if err != nil {
+		return nil, err
+	}
+	fmt.Printf("# json.Marshaled %s\n", data)
+	return UnmarshalJSON(data)
+}
+
+// UnmarshalViaJSON stores the node in the value pointed to by v via "encoding/json".
+func UnmarshalViaJSON(n Node, v interface{}) error {
+	data, err := MarshalJSON(n)
+	if err != nil {
+		return err
+	}
+	return json.Unmarshal(data, v)
+}

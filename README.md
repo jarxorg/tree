@@ -238,7 +238,7 @@ brew install jarxorg/tree/tq
 Download binary
 
 ```
-VERSION=0.6.2 GOOS=Darwin GOARCH=arm64; curl -fsSL "https://github.com/jarxorg/tree/releases/download/v${VERSION}/tree_${VERSION}_${GOOS}_${GOARCH}.tar.gz" | tar xz tq && mv tq /usr/local/bin
+VERSION=0.6.3 GOOS=Darwin GOARCH=arm64; curl -fsSL "https://github.com/jarxorg/tree/releases/download/v${VERSION}/tree_${VERSION}_${GOOS}_${GOARCH}.tar.gz" | tar xz tq && mv tq /usr/local/bin
 ```
 
 ### Usage

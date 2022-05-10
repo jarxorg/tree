@@ -1,7 +1,6 @@
 package tree
 
 import (
-	"encoding/json"
 	"errors"
 	"fmt"
 	"regexp"
@@ -153,28 +152,4 @@ func regexpMatchString(expr, value string) (bool, error) {
 		return false, err
 	}
 	return re.MatchString(value), nil
-}
-
-// Marshal returns the node encoding of v via "encoding/json".
-func Marshal(v interface{}) (Node, error) {
-	if v == nil {
-		return Nil, nil
-	}
-	if n, ok := v.(Node); ok {
-		return n, nil
-	}
-	data, err := json.Marshal(v)
-	if err != nil {
-		return nil, err
-	}
-	return UnmarshalJSON(data)
-}
-
-// Unmarshal stores the node in the value pointed to by v via "encoding/json".
-func Unmarshal(n Node, v interface{}) error {
-	data, err := MarshalJSON(n)
-	if err != nil {
-		return err
-	}
-	return json.Unmarshal(data, v)
 }

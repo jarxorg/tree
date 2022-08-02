@@ -39,21 +39,6 @@ const (
 `
 )
 
-type format string
-
-func (f *format) String() string {
-	return string(*f)
-}
-
-func (f *format) Set(value string) error {
-	switch value {
-	case "json", "yaml":
-		*f = format(value)
-		return nil
-	}
-	return fmt.Errorf("unknown format")
-}
-
 type stringList []string
 
 func (l *stringList) String() string {
@@ -65,79 +50,17 @@ func (l *stringList) Set(value string) error {
 	return nil
 }
 
-var (
-	isVersion    bool
-	isHelp       bool
-	isExpand     bool
-	isSlurp      bool
-	isRaw        bool
-	tmplText     string
-	tmpl         *template.Template
-	inputFormat  = format("")
-	outputFormat = format("json")
-	editExprs    stringList
-)
-
-func init() {
-	flag.BoolVar(&isVersion, "v", false, "print version")
-	flag.BoolVar(&isHelp, "h", false, "help for "+cmd)
-	flag.BoolVar(&isExpand, "x", false, "expand results")
-	flag.BoolVar(&isSlurp, "s", false, "slurp all results into an array")
-	flag.BoolVar(&isRaw, "r", false, "output raw strings")
-	flag.StringVar(&tmplText, "t", "", "golang text/template string (ignore -o flag)")
-	flag.Var(&inputFormat, "i", "input format (json or yaml)")
-	flag.Var(&outputFormat, "o", "output format (json or yaml, default json)")
-	flag.Var(&editExprs, "e", "edit expression")
-
-	flag.Usage = func() {
-		fmt.Fprintf(os.Stderr, "%s\n\nUsage:\n  %s\n\n", desc, usage)
-		fmt.Fprintln(os.Stderr, "Flags:")
-		flag.PrintDefaults()
-		fmt.Fprintf(os.Stderr, "\n%s", examplesText)
-	}
+type decodeError struct {
+	err error
 }
 
-func main() {
-	flag.Parse()
-	if err := run(); err != nil {
-		fmt.Fprintf(os.Stderr, "Error: %s\n", err)
-		os.Exit(1)
-	}
+func (e *decodeError) Error() string {
+	return e.err.Error()
 }
 
-func run() error {
-	if isVersion {
-		fmt.Println(tree.VERSION)
-		return nil
-	}
-	if isHelp || (flag.Arg(0) == "" && len(editExprs) == 0) {
-		flag.Usage()
-		return nil
-	}
-	if tmplText != "" {
-		var err error
-		tmpl, err = template.New("").Parse(tmplText)
-		if err != nil {
-			return err
-		}
-	}
-
-	var fargs []string
-	if args := flag.Args(); len(args) > 1 {
-		fargs = args[1:]
-	}
-	if len(fargs) == 0 && term.IsTerminal(0) {
-		flag.Usage()
-		return nil
-	}
-
-	in, err := newInputReader(fargs)
-	if err != nil {
-		return err
-	}
-	defer in.Close()
-
-	return evaluate(in)
+func isDecodeError(err error) bool {
+	_, ok := err.(*decodeError)
+	return ok
 }
 
 type inputReader struct {
@@ -150,9 +73,9 @@ func newInputReader(fargs []string) (*inputReader, error) {
 	}
 
 	var rs []io.ReadSeekCloser
-	ok := false
+	closeOnDefer := true
 	defer func() {
-		if !ok {
+		if closeOnDefer {
 			for _, r := range rs {
 				r.Close()
 			}
@@ -176,7 +99,7 @@ func newInputReader(fargs []string) (*inputReader, error) {
 	if err != nil {
 		return nil, err
 	}
-	ok = true
+	closeOnDefer = false
 	return &inputReader{ReadSeekCloser: mr}, nil
 }
 
@@ -201,20 +124,126 @@ func newStdinReader() (*inputReader, error) {
 	return &inputReader{ReadSeekCloser: r}, nil
 }
 
-func evaluate(in io.ReadSeeker) error {
-	switch inputFormat {
-	case "json":
-		return evaluateJSON(in)
-	case "yaml":
-		return evaluateYAML(in)
+type runner struct {
+	flagSet      *flag.FlagSet
+	isVersion    bool
+	isHelp       bool
+	isExpand     bool
+	isSlurp      bool
+	isRaw        bool
+	outputFile   string
+	tmplText     string
+	tmpl         *template.Template
+	inputFormat  string
+	outputFormat string
+	editExprs    stringList
+
+	stderr           io.Writer
+	out              io.WriteCloser
+	outputYAMLCalled int
+}
+
+func newRunner() *runner {
+	return &runner{
+		stderr: os.Stderr,
+		out:    io2.NopWriteCloser(os.Stdout),
 	}
-	fns := []func(io.Reader) error{evaluateJSON, evaluateYAML}
+}
+
+func (r *runner) initFlagSet(args []string) error {
+	s := flag.NewFlagSet(args[0], flag.ExitOnError)
+	r.flagSet = s
+
+	s.SetOutput(r.stderr)
+	s.BoolVar(&r.isVersion, "v", false, "print version")
+	s.BoolVar(&r.isHelp, "h", false, "help for "+cmd)
+	s.BoolVar(&r.isExpand, "x", false, "expand results")
+	s.BoolVar(&r.isSlurp, "s", false, "slurp all results into an array")
+	s.BoolVar(&r.isRaw, "r", false, "output raw strings")
+	s.StringVar(&r.outputFile, "O", "", "output file")
+	s.StringVar(&r.tmplText, "t", "", "golang text/template string")
+	s.StringVar(&r.inputFormat, "i", "", "input format (json or yaml)")
+	s.StringVar(&r.outputFormat, "o", "", "output format (json or yaml)")
+	s.Var(&r.editExprs, "e", "edit expression")
+	s.Usage = func() {
+		fmt.Fprintf(r.stderr, "%s\n\nUsage:\n  %s\n\n", desc, usage)
+		fmt.Fprintln(r.stderr, "Flags:")
+		s.PrintDefaults()
+		fmt.Fprintf(r.stderr, "\n%s", examplesText)
+	}
+	return s.Parse(args[1:])
+}
+
+func (r *runner) close() {
+	if r.out != nil {
+		r.out.Close()
+		r.out = nil
+	}
+}
+
+func (r *runner) run(args []string) error {
+	defer r.close()
+
+	if err := r.initFlagSet(args); err != nil {
+		return err
+	}
+	if r.isVersion {
+		fmt.Fprintln(r.out, tree.VERSION)
+		return nil
+	}
+	if r.isHelp || (r.flagSet.Arg(0) == "" && len(r.editExprs) == 0) {
+		r.flagSet.Usage()
+		return nil
+	}
+	if r.tmplText != "" {
+		tmpl, err := template.New("").Parse(r.tmplText)
+		if err != nil {
+			return err
+		}
+		r.tmpl = tmpl
+	}
+
+	var fargs []string
+	if args := r.flagSet.Args(); len(args) > 1 {
+		fargs = args[1:]
+	}
+	if len(fargs) == 0 && term.IsTerminal(0) {
+		r.flagSet.Usage()
+		return nil
+	}
+
+	if r.outputFile != "" {
+		out, err := os.OpenFile(r.outputFile, os.O_CREATE|os.O_WRONLY, os.ModePerm)
+		if err != nil {
+			return err
+		}
+		r.out = out
+	}
+
+	in, err := newInputReader(fargs)
+	if err != nil {
+		return err
+	}
+	defer in.Close()
+
+	return r.evaluate(in)
+}
+
+func (r *runner) evaluate(in io.ReadSeeker) error {
+	switch r.inputFormat {
+	case "yaml":
+		return r.evaluateYAML(in)
+	case "json":
+		return r.evaluateJSON(in)
+	}
+	fns := map[string]func(io.Reader) error{
+		"json": r.evaluateJSON,
+		"yaml": r.evaluateYAML,
+	}
 	var errs []string
-	for i, fn := range fns {
-		if i > 0 {
-			if _, err := in.Seek(0, io.SeekStart); err != nil {
-				return err
-			}
+	for inputFormat, fn := range fns {
+		if _, err := in.Seek(0, io.SeekStart); err != nil {
+			return err
 		}
 		if err := fn(in); err != nil {
 			errs = append(errs, err.Error())
@@ -223,39 +252,27 @@ func evaluate(in io.ReadSeeker) error {
 			}
 			continue
 		}
+		r.inputFormat = inputFormat
 		return nil
 	}
 	return errors.New(strings.Join(errs, "; "))
 }
 
-type decodeError struct {
-	err error
-}
-
-func (e *decodeError) Error() string {
-	return e.err.Error()
-}
-
-func isDecodeError(err error) bool {
-	_, ok := err.(*decodeError)
-	return ok
-}
-
-func evaluateJSON(in io.Reader) error {
+func (r *runner) evaluateJSON(in io.Reader) error {
 	dec := json.NewDecoder(in)
 	for dec.More() {
 		n, err := tree.DecodeJSON(dec)
 		if err != nil {
 			return &decodeError{err}
 		}
-		if err := evaluateNode(n); err != nil {
+		if err := r.evaluateNode(n); err != nil {
 			return err
 		}
 	}
 	return nil
 }
 
-func evaluateYAML(in io.Reader) error {
+func (r *runner) evaluateYAML(in io.Reader) error {
 	dec := yaml.NewDecoder(in)
 	for {
 		n, err := tree.DecodeYAML(dec)
@@ -265,91 +282,112 @@ func evaluateYAML(in io.Reader) error {
 			}
 			return &decodeError{err}
 		}
-		if err := evaluateNode(n); err != nil {
+		if err := r.evaluateNode(n); err != nil {
 			return err
 		}
 	}
 	return nil
 }
 
-func evaluateNode(node tree.Node) error {
-	for _, expr := range editExprs {
+func (r *runner) evaluateNode(node tree.Node) error {
+	for _, expr := range r.editExprs {
 		if err := tree.Edit(&node, expr); err != nil {
 			return err
 		}
 	}
-	expr := flag.Arg(0)
+	expr := r.flagSet.Arg(0)
 	if expr == "" {
 		expr = "."
 	}
-	rs, err := tree.Find(node, expr)
+	results, err := tree.Find(node, expr)
 	if err != nil {
 		return err
 	}
-	if len(rs) == 0 {
+	if len(results) == 0 {
 		return nil
 	}
-	if isSlurp {
-		rs = []tree.Node{tree.Array(rs)}
+	if r.isSlurp {
+		results = []tree.Node{tree.Array(results)}
 	}
-	if isExpand {
+	if r.isExpand {
 		cb := func(_ interface{}, v tree.Node) error {
-			return output(v)
+			return r.output(v)
 		}
-		for _, r := range rs {
-			if err := r.Each(cb); err != nil {
+		for _, result := range results {
+			if err := result.Each(cb); err != nil {
 				return err
 			}
 		}
 		return nil
 	}
-	for _, r := range rs {
-		if err := output(r); err != nil {
+	for _, result := range results {
+		if err := r.output(result); err != nil {
 			return err
 		}
 	}
 	return nil
 }
 
-func output(node tree.Node) error {
-	if isRaw && node.Type().IsValue() {
-		fmt.Println(node.Value().String())
-		return nil
-	}
-	if tmpl != nil {
-		if err := tmpl.Execute(os.Stdout, node); err != nil {
+func (r *runner) output(node tree.Node) error {
+	if r.isRaw && node.Type().IsValue() {
+		if _, err := fmt.Fprintln(r.out, node.Value().String()); err != nil {
 			return err
 		}
-		fmt.Println()
 		return nil
+	}
+	if r.tmpl != nil {
+		if err := r.tmpl.Execute(r.out, node); err != nil {
+			return err
+		}
+		if _, err := fmt.Fprintln(r.out); err != nil {
+			return err
+		}
+		return nil
+	}
+	outputFormat := r.outputFormat
+	if outputFormat == "" && r.inputFormat != "" {
+		outputFormat = r.inputFormat
 	}
 	switch outputFormat {
 	case "yaml":
-		return outputYAML(node)
+		return r.outputYAML(node)
 	}
-	return outputJSON(node)
+	return r.outputJSON(node)
 }
 
-var outputYAMLCalled = 0
-
-func outputYAML(node tree.Node) error {
-	if outputYAMLCalled > 0 {
-		fmt.Println("---")
+func (r *runner) outputYAML(node tree.Node) error {
+	if r.outputYAMLCalled > 0 {
+		if _, err := fmt.Fprintln(r.out, "---"); err != nil {
+			return err
+		}
 	}
-	out, err := tree.MarshalYAML(node)
+	r.outputYAMLCalled++
+
+	b, err := tree.MarshalYAML(node)
 	if err != nil {
 		return err
 	}
-	fmt.Print(string(out))
-	outputYAMLCalled++
+	if _, err := r.out.Write(b); err != nil {
+		return err
+	}
 	return nil
 }
 
-func outputJSON(node tree.Node) error {
-	out, err := json.MarshalIndent(node, "", "  ")
+func (r *runner) outputJSON(node tree.Node) error {
+	b, err := json.MarshalIndent(node, "", "  ")
 	if err != nil {
 		return err
 	}
-	fmt.Println(string(out))
+	if _, err := r.out.Write(b); err != nil {
+		return err
+	}
 	return nil
+}
+
+func main() {
+	r := newRunner()
+	if err := r.run(os.Args); err != nil {
+		fmt.Fprintf(os.Stderr, "Error: %s\n", err)
+		os.Exit(1)
+	}
 }

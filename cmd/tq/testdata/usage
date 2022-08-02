@@ -1,0 +1,38 @@
+tq is a command-line JSON/YAML processor.
+
+Usage:
+  tq [flags] [query] ([file...])
+
+Flags:
+  -O string
+    	output file
+  -e value
+    	edit expression
+  -h	help for tq
+  -i string
+    	input format (json or yaml)
+  -o string
+    	output format (json or yaml)
+  -r	output raw strings
+  -s	slurp all results into an array
+  -t string
+    	golang text/template string
+  -v	print version
+  -x	expand results
+
+Examples:
+  % echo '{"colors": ["red", "green", "blue"]}' | tq '.colors[0]'
+  "red"
+
+  % echo '{"users":[{"id":1,"name":"one"},{"id":2,"name":"two"}]}' | tq -x -t '{{.id}}: {{.name}}' '.users'
+  1: one
+  2: two
+
+  % echo '{}' | tq -e '.colors = ["red", "green"]' -e '.colors += "blue"' .
+  {
+    "colors": [
+      "red",
+      "green",
+      "blue"
+    ]
+  }

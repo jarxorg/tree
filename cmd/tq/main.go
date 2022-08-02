@@ -138,14 +138,23 @@ type runner struct {
 	outputFormat string
 	editExprs    stringList
 
+	stderr           io.Writer
 	out              io.WriteCloser
 	outputYAMLCalled int
+}
+
+func newRunner() *runner {
+	return &runner{
+		stderr: os.Stderr,
+		out:    io2.NopWriteCloser(os.Stdout),
+	}
 }
 
 func (r *runner) initFlagSet(args []string) error {
 	s := flag.NewFlagSet(args[0], flag.ExitOnError)
 	r.flagSet = s
 
+	s.SetOutput(r.stderr)
 	s.BoolVar(&r.isVersion, "v", false, "print version")
 	s.BoolVar(&r.isHelp, "h", false, "help for "+cmd)
 	s.BoolVar(&r.isExpand, "x", false, "expand results")
@@ -154,13 +163,13 @@ func (r *runner) initFlagSet(args []string) error {
 	s.StringVar(&r.outputFile, "O", "", "output file")
 	s.StringVar(&r.tmplText, "t", "", "golang text/template string")
 	s.StringVar(&r.inputFormat, "i", "", "input format (json or yaml)")
-	s.StringVar(&r.outputFormat, "o", "json", "output format (json or yaml)")
+	s.StringVar(&r.outputFormat, "o", "", "output format (json or yaml)")
 	s.Var(&r.editExprs, "e", "edit expression")
 	s.Usage = func() {
-		fmt.Fprintf(os.Stderr, "%s\n\nUsage:\n  %s\n\n", desc, usage)
-		fmt.Fprintln(os.Stderr, "Flags:")
+		fmt.Fprintf(r.stderr, "%s\n\nUsage:\n  %s\n\n", desc, usage)
+		fmt.Fprintln(r.stderr, "Flags:")
 		s.PrintDefaults()
-		fmt.Fprintf(os.Stderr, "\n%s", examplesText)
+		fmt.Fprintf(r.stderr, "\n%s", examplesText)
 	}
 	return s.Parse(args[1:])
 }
@@ -179,7 +188,7 @@ func (r *runner) run(args []string) error {
 		return err
 	}
 	if r.isVersion {
-		fmt.Println(tree.VERSION)
+		fmt.Fprintln(r.out, tree.VERSION)
 		return nil
 	}
 	if r.isHelp || (r.flagSet.Arg(0) == "" && len(r.editExprs) == 0) {
@@ -209,8 +218,6 @@ func (r *runner) run(args []string) error {
 			return err
 		}
 		r.out = out
-	} else {
-		r.out = os.Stdout
 	}
 
 	in, err := newInputReader(fargs)
@@ -229,13 +236,14 @@ func (r *runner) evaluate(in io.ReadSeeker) error {
 	case "json":
 		return r.evaluateJSON(in)
 	}
-	fns := []func(io.Reader) error{r.evaluateJSON, r.evaluateYAML}
+	fns := map[string]func(io.Reader) error{
+		"json": r.evaluateJSON,
+		"yaml": r.evaluateYAML,
+	}
 	var errs []string
-	for i, fn := range fns {
-		if i > 0 {
-			if _, err := in.Seek(0, io.SeekStart); err != nil {
-				return err
-			}
+	for inputFormat, fn := range fns {
+		if _, err := in.Seek(0, io.SeekStart); err != nil {
+			return err
 		}
 		if err := fn(in); err != nil {
 			errs = append(errs, err.Error())
@@ -244,6 +252,7 @@ func (r *runner) evaluate(in io.ReadSeeker) error {
 			}
 			continue
 		}
+		r.inputFormat = inputFormat
 		return nil
 	}
 	return errors.New(strings.Join(errs, "; "))
@@ -327,7 +336,7 @@ func (r *runner) output(node tree.Node) error {
 		return nil
 	}
 	if r.tmpl != nil {
-		if err := r.tmpl.Execute(os.Stdout, node); err != nil {
+		if err := r.tmpl.Execute(r.out, node); err != nil {
 			return err
 		}
 		if _, err := fmt.Fprintln(r.out); err != nil {
@@ -335,7 +344,11 @@ func (r *runner) output(node tree.Node) error {
 		}
 		return nil
 	}
-	switch r.outputFormat {
+	outputFormat := r.outputFormat
+	if outputFormat == "" && r.inputFormat != "" {
+		outputFormat = r.inputFormat
+	}
+	switch outputFormat {
 	case "yaml":
 		return r.outputYAML(node)
 	}
@@ -372,7 +385,7 @@ func (r *runner) outputJSON(node tree.Node) error {
 }
 
 func main() {
-	r := &runner{}
+	r := newRunner()
 	if err := r.run(os.Args); err != nil {
 		fmt.Fprintf(os.Stderr, "Error: %s\n", err)
 		os.Exit(1)

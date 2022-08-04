@@ -141,6 +141,7 @@ type runner struct {
 	stderr           io.Writer
 	out              io.WriteCloser
 	outputYAMLCalled int
+	slurpResults     tree.Array
 }
 
 func newRunner() *runner {
@@ -269,6 +270,10 @@ func (r *runner) evaluateJSON(in io.Reader) error {
 			return err
 		}
 	}
+	if len(r.slurpResults) > 0 {
+		defer func() { r.slurpResults = nil }()
+		return r.output(r.slurpResults)
+	}
 	return nil
 }
 
@@ -285,6 +290,10 @@ func (r *runner) evaluateYAML(in io.Reader) error {
 		if err := r.evaluateNode(n); err != nil {
 			return err
 		}
+	}
+	if len(r.slurpResults) > 0 {
+		defer func() { r.slurpResults = nil }()
+		return r.output(r.slurpResults)
 	}
 	return nil
 }
@@ -307,7 +316,8 @@ func (r *runner) evaluateNode(node tree.Node) error {
 		return nil
 	}
 	if r.isSlurp {
-		results = []tree.Node{tree.Array(results)}
+		r.slurpResults = append(r.slurpResults, results...)
+		return nil
 	}
 	if r.isExpand {
 		cb := func(_ interface{}, v tree.Node) error {

@@ -67,6 +67,14 @@ func TestRun(t *testing.T) {
 			args:  []string{"-s", ".store.book[]"},
 			want:  mustReadFileString("testdata/book-s"),
 		}, {
+			stdin: "testdata/book-x",
+			args:  []string{"-s", "."},
+			want:  mustReadFileString("testdata/book-s"),
+		}, {
+			stdin: "testdata/book-s",
+			args:  []string{"-x", "."},
+			want:  mustReadFileString("testdata/book-x"),
+		}, {
 			stdin: "testdata/store.json",
 			args: []string{
 				"-t", "{{.title}},{{.author}},{{.category}},{{.price}}",

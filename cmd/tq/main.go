@@ -362,26 +362,13 @@ func (r *runner) outputYAML(node tree.Node) error {
 		}
 	}
 	r.outputYAMLCalled++
-
-	b, err := tree.MarshalYAML(node)
-	if err != nil {
-		return err
-	}
-	if _, err := r.out.Write(b); err != nil {
-		return err
-	}
-	return nil
+	return yaml.NewEncoder(r.out).Encode(node)
 }
 
 func (r *runner) outputJSON(node tree.Node) error {
-	b, err := json.MarshalIndent(node, "", "  ")
-	if err != nil {
-		return err
-	}
-	if _, err := r.out.Write(b); err != nil {
-		return err
-	}
-	return nil
+	enc := json.NewEncoder(r.out)
+	enc.SetIndent("", "  ")
+	return enc.Encode(node)
 }
 
 func main() {

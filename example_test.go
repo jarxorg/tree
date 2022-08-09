@@ -194,5 +194,4 @@ func ExampleEdit() {
 	//   map[Colors:[Crimson Red Ruby Maroon Pink] ID:1 Name:Blue]
 	// Delete Colors:
 	//   map[ID:1 Name:Blue]
-
 }

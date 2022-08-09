@@ -5,6 +5,14 @@
 
 Tree is a simple structure for dealing with dynamic or unknown JSON/YAML in Go.
 
+## Features
+
+- Parses json/yaml of unknown structure to get to nodes in a chain expression.
+- Syntax similar to Go standard and map and slice.
+- Find function can be specified the [Query](#query) expression.
+- Edit function can be specified the [Edit](#edit) expression.
+- Bundled 'tq' that is a portable command-line JSON/YAML processor.
+
 ## Syntax
 
 ### Go
@@ -42,75 +50,39 @@ Colors:
 ## Marshal and Unmarshal
 
 ```go
-package main
-
-import (
-	"encoding/json"
-	"fmt"
-	"log"
-
-	"github.com/jarxorg/tree"
-	"gopkg.in/yaml.v2"
-)
-
-func main() {
+func ExampleMarshalJSON() {
 	group := tree.Map{
 		"ID":     tree.ToValue(1),
 		"Name":   tree.ToValue("Reds"),
 		"Colors": tree.ToArrayValues("Crimson", "Red", "Ruby", "Maroon"),
 	}
-	// NOTE: Get chain
-	fmt.Println(group.Get("Colors").Get(1))
-	fmt.Println()
-
-	// NOTE: Output JSON
-	j, err := json.Marshal(group)
+	b, err := json.Marshal(group)
 	if err != nil {
 		log.Fatal(err)
 	}
-	fmt.Println(string(j))
-	fmt.Println()
-
-	// NOTE: Output YAML
-	y, err := yaml.Marshal(group)
-	if err != nil {
-		log.Fatal(err)
-	}
-	fmt.Print(string(y))
-	fmt.Println()
-
-	// NOTE: Unmarshal JSON
-	var n tree.Map
-	if err := json.Unmarshal(j, &n); err != nil {
-		log.Fatal(err)
-	}
-	fmt.Printf("%#v\n", n)
-	fmt.Println()
-
-	// NOTE: Find
-	r, err := tree.Find(n, ".Colors[1]")
-	if err != nil {
-		log.Fatal(err)
-	}
-	fmt.Printf("%#v\n", r)
-	fmt.Println()
+	fmt.Println(string(b))
 
 	// Output:
-	// Red
-	//
 	// {"Colors":["Crimson","Red","Ruby","Maroon"],"ID":1,"Name":"Reds"}
-	//
-	// Colors:
-	// - Crimson
-	// - Red
-	// - Ruby
-	// - Maroon
-	// ID: 1
-	// Name: Reds
-	//
-	// tree.Map{"Colors":tree.Array{"Crimson", "Red", "Ruby", "Maroon"}, "ID":1, "Name":"Reds"}
-	//
-	// "Red"
+}
+```
+
+```go
+func ExampleUnmarshalJSON() {
+	data := []byte(`[
+  {"Name": "Platypus", "Order": "Monotremata"},
+  {"Name": "Quoll",    "Order": "Dasyuromorphia"}
+]`)
+
+	var animals tree.Array
+	err := json.Unmarshal(data, &animals)
+	if err != nil {
+		log.Fatal(err)
+	}
+	fmt.Printf("%+v\n", animals)
+
+	// Output:
+	// [map[Name:Platypus Order:Monotremata] map[Name:Quoll Order:Dasyuromorphia]]
 }
 ```
 
@@ -164,7 +136,54 @@ func main() {
 }
 ```
 
-## Query
+## Get
+
+```go
+func ExampleGet() {
+	group := tree.Map{
+		"ID":     tree.ToValue(1),
+		"Name":   tree.ToValue("Reds"),
+		"Colors": tree.ToArrayValues("Crimson", "Red", "Ruby", "Maroon"),
+		"Nil":    nil,
+	}
+	fmt.Println(group.Get("Colors").Get(1))
+	fmt.Println(group.Get("Colors", 2))
+	fmt.Println(group.Get("Colors").Get(5).IsNil())
+	fmt.Println(group.Get("Nil").IsNil())
+
+	// Output:
+	// Red
+	// Ruby
+	// true
+	// true
+}
+```
+
+## Find
+
+```go
+func ExampleFind() {
+	group := tree.Map{
+		"ID":     tree.ToValue(1),
+		"Name":   tree.ToValue("Reds"),
+		"Colors": tree.ToArrayValues("Crimson", "Red", "Ruby", "Maroon"),
+	}
+
+	rs, err := group.Find(".Colors[1:3]")
+	if err != nil {
+		log.Fatal(err)
+	}
+	for _, r := range rs {
+		fmt.Println(r)
+	}
+
+	// Output:
+	// Red
+	// Ruby
+}
+```
+
+### Query
 
 | Query | Description | Results |
 | - | - | - |
@@ -178,7 +197,7 @@ func main() {
 | .store.book[(.category == "fiction" or .category == "reference") and .price < 10].title | All titles of books these are categoried into "fiction", "reference" and price < 10 | "Sayings of the Century", "Moby Dick" |
 | .store.book[.title ~= "^S"].title | Titles beginning with "S" | "Sayings of the Century", "Sword of Honour" |
 
-### Illustrative Object
+#### Illustrative Object
 
 ```json
 {
@@ -215,6 +234,41 @@ func main() {
       "price": 19.95
     }
   }
+}
+```
+
+## Edit
+
+```go
+func ExampleEdit() {
+	var group tree.Node = tree.Map{
+		"ID":     tree.ToValue(1),
+		"Name":   tree.ToValue("Reds"),
+		"Colors": tree.ToArrayValues("Crimson", "Red", "Ruby", "Maroon"),
+	}
+
+	if err := tree.Edit(&group, ".Colors += \"Pink\""); err != nil {
+		log.Fatal(err)
+	}
+	fmt.Printf("Append Pink to Colors:\n  %+v\n", group)
+
+	if err := tree.Edit(&group, ".Name = \"Blue\""); err != nil {
+		log.Fatal(err)
+	}
+	fmt.Printf("Set Blue to Name:\n  %+v\n", group)
+
+	if err := tree.Edit(&group, ".Colors ^?"); err != nil {
+		log.Fatal(err)
+	}
+	fmt.Printf("Delete Colors:\n  %+v\n", group)
+
+	// Output:
+	// Append Pink to Colors:
+	//   map[Colors:[Crimson Red Ruby Maroon Pink] ID:1 Name:Reds]
+	// Set Blue to Name:
+	//   map[Colors:[Crimson Red Ruby Maroon Pink] ID:1 Name:Blue]
+	// Delete Colors:
+	//   map[ID:1 Name:Blue]
 }
 ```
 

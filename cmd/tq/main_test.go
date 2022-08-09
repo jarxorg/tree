@@ -44,7 +44,7 @@ func TestRun(t *testing.T) {
 		}, {
 			stdin: "testdata/store.yaml",
 			args:  []string{".store.book[0]"},
-			want:  mustReadFileString("testdata/book-0.json"),
+			want:  mustReadFileString("testdata/book-0.yaml"),
 		}, {
 			stdin: "testdata/store.yaml",
 			args:  []string{"-i", "yaml", ".store.book[0]"},
@@ -91,9 +91,18 @@ func TestRun(t *testing.T) {
 			},
 			want: mustReadFileString("testdata/book-0.json"),
 		}, {
+			args:   []string{"-i", "json", ".", "testdata/invalid-json"},
+			errstr: `failed to evaluate testdata/invalid-json: invalid character 'i' looking for beginning of value`,
+		}, {
 			stdin:  "testdata/invalid-json",
 			args:   []string{"-i", "json", "."},
-			errstr: `invalid character 'i' looking for beginning of value`,
+			errstr: `failed to evaluate STDIN: invalid character 'i' looking for beginning of value`,
+		}, {
+			args:   []string{"-i", "yaml", ".", "testdata/invalid-yaml"},
+			errstr: `failed to evaluate testdata/invalid-yaml: yaml: found unexpected end of stream`,
+		}, {
+			args: []string{".", "testdata/book-0.yaml", "testdata/book-0.yaml"},
+			want: mustReadFileString("testdata/book-0.yaml") + "---\n" + mustReadFileString("testdata/book-0.yaml"),
 		},
 	}
 	fn := func(i int) {

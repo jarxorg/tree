@@ -6,6 +6,7 @@ Usage:
 Flags:
   -O string
     	output file
+  -U	update files, inplace
   -e value
     	edit expression
   -h	help for tq

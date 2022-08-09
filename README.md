@@ -3,7 +3,7 @@
 [![PkgGoDev](https://pkg.go.dev/badge/github.com/jarxorg/tree)](https://pkg.go.dev/github.com/jarxorg/tree)
 [![Report Card](https://goreportcard.com/badge/github.com/jarxorg/tree)](https://goreportcard.com/report/github.com/jarxorg/tree)
 
-Tree is a simple structure for dealing with dynamic or unknown JSON/YAML structures in Go.
+Tree is a simple structure for dealing with dynamic or unknown JSON/YAML in Go.
 
 ## Syntax
 

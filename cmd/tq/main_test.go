@@ -94,6 +94,10 @@ func TestRun(t *testing.T) {
 			stdin:  "testdata/invalid-json",
 			args:   []string{"-i", "json", "."},
 			errstr: `invalid character 'i' looking for beginning of value`,
+		}, {
+			stdin:  "testdata/invalid-yaml",
+			args:   []string{"-i", "yaml", "."},
+			errstr: `yaml: found unexpected end of stream`,
 		},
 	}
 	fn := func(i int) {

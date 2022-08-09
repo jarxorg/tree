@@ -63,47 +63,29 @@ func isDecodeError(err error) bool {
 	return ok
 }
 
-type inputReader struct {
-	io.ReadSeekCloser
+type inputFiles struct {
+	filenames []string
+	off       int
+	filename  string
 }
 
-func newInputReader(fargs []string) (*inputReader, error) {
-	if len(fargs) == 0 {
+func newInputFiles(filenames []string) *inputFiles {
+	return &inputFiles{filenames: filenames}
+}
+
+func (f *inputFiles) nextReader() (io.ReadSeekCloser, error) {
+	if f.off >= len(f.filenames) {
+		return nil, io.EOF
+	}
+	f.filename = f.filenames[f.off]
+	f.off++
+	if f.filename == "-" {
 		return newStdinReader()
 	}
-
-	var rs []io.ReadSeekCloser
-	closeOnDefer := true
-	defer func() {
-		if closeOnDefer {
-			for _, r := range rs {
-				r.Close()
-			}
-		}
-	}()
-	isYaml := func(f string) bool {
-		return strings.HasSuffix(f, ".yaml") || strings.HasSuffix(f, ".yml")
-	}
-	for _, farg := range fargs {
-		var err error
-		f, err := os.Open(farg)
-		if err != nil {
-			return nil, err
-		}
-		if len(rs) > 0 && isYaml(farg) {
-			rs = append(rs, io2.NopReadSeekCloser(strings.NewReader("\n---\n")))
-		}
-		rs = append(rs, f)
-	}
-	mr, err := io2.MultiReadSeekCloser(rs...)
-	if err != nil {
-		return nil, err
-	}
-	closeOnDefer = false
-	return &inputReader{ReadSeekCloser: mr}, nil
+	return os.Open(f.filename)
 }
 
-func newStdinReader() (*inputReader, error) {
+func newStdinReader() (io.ReadSeekCloser, error) {
 	tmp, err := os.CreateTemp("", "*.stdin")
 	if err != nil {
 		return nil, err
@@ -118,10 +100,9 @@ func newStdinReader() (*inputReader, error) {
 		return nil, err
 	}
 	if _, err := r.Seek(0, io.SeekStart); err != nil {
-		r.Close()
 		return nil, err
 	}
-	return &inputReader{ReadSeekCloser: r}, nil
+	return r, nil
 }
 
 type runner struct {
@@ -133,11 +114,11 @@ type runner struct {
 	isRaw        bool
 	outputFile   string
 	tmplText     string
-	tmpl         *template.Template
 	inputFormat  string
 	outputFormat string
 	editExprs    stringList
 
+	tmpl             *template.Template
 	stderr           io.Writer
 	out              io.WriteCloser
 	outputYAMLCalled int
@@ -204,13 +185,16 @@ func (r *runner) run(args []string) error {
 		r.tmpl = tmpl
 	}
 
-	var fargs []string
+	var filenames []string
 	if args := r.flagSet.Args(); len(args) > 1 {
-		fargs = args[1:]
+		filenames = args[1:]
 	}
-	if len(fargs) == 0 && term.IsTerminal(0) {
-		r.flagSet.Usage()
-		return nil
+	if len(filenames) == 0 {
+		if term.IsTerminal(0) {
+			r.flagSet.Usage()
+			return nil
+		}
+		filenames = []string{"-"}
 	}
 
 	if r.outputFile != "" {
@@ -220,17 +204,25 @@ func (r *runner) run(args []string) error {
 		}
 		r.out = out
 	}
+	return r.evaluateInputFiles(newInputFiles(filenames))
+}
 
-	in, err := newInputReader(fargs)
+func (r *runner) evaluateInputFiles(f *inputFiles) error {
+	in, err := f.nextReader()
 	if err != nil {
+		if err == io.EOF {
+			return nil
+		}
 		return err
 	}
 	defer in.Close()
-
-	return r.evaluate(in)
+	if err := r.evaluate(in); err != nil {
+		return err
+	}
+	return r.evaluateInputFiles(f)
 }
 
-func (r *runner) evaluate(in io.ReadSeeker) error {
+func (r *runner) evaluate(in io.ReadSeekCloser) error {
 	switch r.inputFormat {
 	case "yaml":
 		return r.evaluateYAML(in)
@@ -383,6 +375,8 @@ func (r *runner) outputJSON(node tree.Node) error {
 
 func main() {
 	r := newRunner()
+	defer r.close()
+
 	if err := r.run(os.Args); err != nil {
 		fmt.Fprintf(os.Stderr, "Error: %s\n", err)
 		os.Exit(1)

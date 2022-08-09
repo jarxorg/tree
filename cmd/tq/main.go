@@ -3,7 +3,6 @@ package main
 import (
 	"encoding/json"
 	"errors"
-	"flag"
 	"fmt"
 	"io"
 	"os"
@@ -12,6 +11,7 @@ import (
 
 	"github.com/jarxorg/io2"
 	"github.com/jarxorg/tree"
+	"github.com/spf13/pflag"
 	"golang.org/x/term"
 	"gopkg.in/yaml.v2"
 )
@@ -107,7 +107,7 @@ func newStdinReader() (io.ReadSeekCloser, error) {
 }
 
 type runner struct {
-	flagSet      *flag.FlagSet
+	flagSet      *pflag.FlagSet
 	isVersion    bool
 	isHelp       bool
 	isExpand     bool
@@ -118,7 +118,7 @@ type runner struct {
 	tmplText     string
 	inputFormat  string
 	outputFormat string
-	editExprs    stringList
+	editExprs    []string
 
 	tmpl             *template.Template
 	stderr           io.Writer
@@ -136,21 +136,21 @@ func newRunner() *runner {
 }
 
 func (r *runner) initFlagSet(args []string) error {
-	s := flag.NewFlagSet(args[0], flag.ExitOnError)
+	s := pflag.NewFlagSet(args[0], pflag.ExitOnError)
 	r.flagSet = s
 
 	s.SetOutput(r.stderr)
-	s.BoolVar(&r.isVersion, "v", false, "print version")
-	s.BoolVar(&r.isHelp, "h", false, "help for "+cmd)
-	s.BoolVar(&r.isExpand, "x", false, "expand results")
-	s.BoolVar(&r.isSlurp, "s", false, "slurp all results into an array")
-	s.BoolVar(&r.isRaw, "r", false, "output raw strings")
-	s.BoolVar(&r.isInplace, "U", false, "update files, inplace")
-	s.StringVar(&r.outputFile, "O", "", "output file")
-	s.StringVar(&r.tmplText, "t", "", "golang text/template string")
-	s.StringVar(&r.inputFormat, "i", "", "input format (json or yaml)")
-	s.StringVar(&r.outputFormat, "o", "", "output format (json or yaml)")
-	s.Var(&r.editExprs, "e", "edit expression")
+	s.BoolVarP(&r.isVersion, "version", "v", false, "print version")
+	s.BoolVarP(&r.isHelp, "help", "h", false, "help for "+cmd)
+	s.BoolVarP(&r.isExpand, "expand", "x", false, "expand results")
+	s.BoolVarP(&r.isSlurp, "slurp", "s", false, "slurp all results into an array")
+	s.BoolVarP(&r.isRaw, "raw", "r", false, "output raw strings")
+	s.BoolVarP(&r.isInplace, "inplace", "U", false, "update files, inplace")
+	s.StringVarP(&r.outputFile, "output", "O", "", "output file")
+	s.StringVarP(&r.tmplText, "template", "t", "", "golang text/template string")
+	s.StringVarP(&r.inputFormat, "input-format", "i", "", "input format (json or yaml)")
+	s.StringVarP(&r.outputFormat, "output-format", "o", "", "output format (json or yaml, default json)")
+	s.StringArrayVarP(&r.editExprs, "edit", "e", nil, "edit expression")
 	s.Usage = func() {
 		fmt.Fprintf(r.stderr, "%s\n\nUsage:\n  %s\n\n", desc, usage)
 		fmt.Fprintln(r.stderr, "Flags:")

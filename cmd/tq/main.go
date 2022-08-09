@@ -235,7 +235,10 @@ func (r *runner) evaluateInputFiles(f *inputFiles) error {
 		}()
 	}
 	if err := r.evaluate(in); err != nil {
-		return err
+		if filename == filenameStdin {
+			filename = "STDIN"
+		}
+		return fmt.Errorf("failed to evaluate %s: %w", filename, err)
 	}
 	if inplaceTmp != nil {
 		if _, err := inplaceTmp.Seek(0, io.SeekStart); err != nil {

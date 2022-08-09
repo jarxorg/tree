@@ -44,7 +44,7 @@ func TestRun(t *testing.T) {
 		}, {
 			stdin: "testdata/store.yaml",
 			args:  []string{".store.book[0]"},
-			want:  mustReadFileString("testdata/book-0.json"),
+			want:  mustReadFileString("testdata/book-0.yaml"),
 		}, {
 			stdin: "testdata/store.yaml",
 			args:  []string{"-i", "yaml", ".store.book[0]"},
@@ -98,6 +98,9 @@ func TestRun(t *testing.T) {
 			stdin:  "testdata/invalid-yaml",
 			args:   []string{"-i", "yaml", "."},
 			errstr: `yaml: found unexpected end of stream`,
+		}, {
+			args: []string{".", "testdata/book-0.yaml", "testdata/book-0.yaml"},
+			want: mustReadFileString("testdata/book-0.yaml") + "---\n" + mustReadFileString("testdata/book-0.yaml"),
 		},
 	}
 	fn := func(i int) {

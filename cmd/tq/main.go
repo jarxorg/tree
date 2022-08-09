@@ -37,6 +37,7 @@ const (
     ]
   }
 `
+	filenameStdin = "-"
 )
 
 type stringList []string
@@ -86,7 +87,7 @@ func (f *inputFiles) nextReader() (io.ReadSeekCloser, error) {
 }
 
 func newStdinReader() (io.ReadSeekCloser, error) {
-	tmp, err := os.CreateTemp("", "*.stdin")
+	tmp, err := os.CreateTemp("", "*.tq.tmp")
 	if err != nil {
 		return nil, err
 	}
@@ -112,6 +113,7 @@ type runner struct {
 	isExpand     bool
 	isSlurp      bool
 	isRaw        bool
+	isInplace    bool
 	outputFile   string
 	tmplText     string
 	inputFormat  string
@@ -121,6 +123,7 @@ type runner struct {
 	tmpl             *template.Template
 	stderr           io.Writer
 	out              io.WriteCloser
+	guessFormat      string
 	outputYAMLCalled int
 	slurpResults     tree.Array
 }
@@ -142,6 +145,7 @@ func (r *runner) initFlagSet(args []string) error {
 	s.BoolVar(&r.isExpand, "x", false, "expand results")
 	s.BoolVar(&r.isSlurp, "s", false, "slurp all results into an array")
 	s.BoolVar(&r.isRaw, "r", false, "output raw strings")
+	s.BoolVar(&r.isInplace, "U", false, "update files, inplace")
 	s.StringVar(&r.outputFile, "O", "", "output file")
 	s.StringVar(&r.tmplText, "t", "", "golang text/template string")
 	s.StringVar(&r.inputFormat, "i", "", "input format (json or yaml)")
@@ -194,11 +198,11 @@ func (r *runner) run(args []string) error {
 			r.flagSet.Usage()
 			return nil
 		}
-		filenames = []string{"-"}
+		filenames = []string{filenameStdin}
 	}
 
 	if r.outputFile != "" {
-		out, err := os.OpenFile(r.outputFile, os.O_CREATE|os.O_WRONLY, os.ModePerm)
+		out, err := os.Create(r.outputFile)
 		if err != nil {
 			return err
 		}
@@ -216,25 +220,52 @@ func (r *runner) evaluateInputFiles(f *inputFiles) error {
 		return err
 	}
 	defer in.Close()
+
+	filename := f.filename
+	var inplaceTmp *os.File
+	if r.outputFile == "" && r.isInplace && !r.isSlurp && filename != filenameStdin {
+		inplaceTmp, err = os.CreateTemp("", "*.tq.tmp")
+		if err != nil {
+			return err
+		}
+		r.out = inplaceTmp
+		defer func() {
+			inplaceTmp.Close()
+			os.Remove(inplaceTmp.Name())
+		}()
+	}
 	if err := r.evaluate(in); err != nil {
 		return err
+	}
+	if inplaceTmp != nil {
+		if _, err := inplaceTmp.Seek(0, io.SeekStart); err != nil {
+			return err
+		}
+		out, err := os.Create(filename)
+		if err != nil {
+			return err
+		}
+		defer out.Close()
+		if _, err := io.Copy(out, inplaceTmp); err != nil {
+			return err
+		}
 	}
 	return r.evaluateInputFiles(f)
 }
 
 func (r *runner) evaluate(in io.ReadSeekCloser) error {
 	switch r.inputFormat {
-	case "yaml":
-		return r.evaluateYAML(in)
 	case "json":
 		return r.evaluateJSON(in)
+	case "yaml":
+		return r.evaluateYAML(in)
 	}
-	fns := map[string]func(io.Reader) error{
-		"json": r.evaluateJSON,
-		"yaml": r.evaluateYAML,
+	fns := []func(io.Reader) error{
+		r.evaluateJSON,
+		r.evaluateYAML,
 	}
 	var errs []string
-	for inputFormat, fn := range fns {
+	for _, fn := range fns {
 		if _, err := in.Seek(0, io.SeekStart); err != nil {
 			return err
 		}
@@ -245,7 +276,6 @@ func (r *runner) evaluate(in io.ReadSeekCloser) error {
 			}
 			continue
 		}
-		r.inputFormat = inputFormat
 		return nil
 	}
 	return errors.New(strings.Join(errs, "; "))
@@ -258,6 +288,7 @@ func (r *runner) evaluateJSON(in io.Reader) error {
 		if err != nil {
 			return &decodeError{err}
 		}
+		r.guessFormat = "json"
 		if err := r.evaluateNode(n); err != nil {
 			return err
 		}
@@ -279,6 +310,7 @@ func (r *runner) evaluateYAML(in io.Reader) error {
 			}
 			return &decodeError{err}
 		}
+		r.guessFormat = "yaml"
 		if err := r.evaluateNode(n); err != nil {
 			return err
 		}
@@ -347,8 +379,8 @@ func (r *runner) output(node tree.Node) error {
 		return nil
 	}
 	outputFormat := r.outputFormat
-	if outputFormat == "" && r.inputFormat != "" {
-		outputFormat = r.inputFormat
+	if outputFormat == "" {
+		outputFormat = r.guessFormat
 	}
 	switch outputFormat {
 	case "yaml":

@@ -288,3 +288,8 @@ Examples:
 | tq '.store.book[]' | jq '.store.book[]' |
 | tq '.store.book[:2].price' | jq '.store.book[:2][] \| .price' |
 | tq '.store.book[.category == "fiction" and .price < 10].title' | jq '.store.book[] \| select(.category == "fiction" and .price < 10) \| .title' |
+
+
+## Third-party library licenses
+
+- [spf13/pflag](https://github.com/spf13/pflag/blob/master/LICENSE)

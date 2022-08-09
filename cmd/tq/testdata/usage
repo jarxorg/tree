@@ -4,22 +4,17 @@ Usage:
   tq [flags] [query] ([file...])
 
 Flags:
-  -O string
-    	output file
-  -U	update files, inplace
-  -e value
-    	edit expression
-  -h	help for tq
-  -i string
-    	input format (json or yaml)
-  -o string
-    	output format (json or yaml)
-  -r	output raw strings
-  -s	slurp all results into an array
-  -t string
-    	golang text/template string
-  -v	print version
-  -x	expand results
+  -e, --edit stringArray       edit expression
+  -x, --expand                 expand results
+  -h, --help                   help for tq
+  -U, --inplace                update files, inplace
+  -i, --input-format string    input format (json or yaml)
+  -O, --output string          output file
+  -o, --output-format string   output format (json or yaml, default json)
+  -r, --raw                    output raw strings
+  -s, --slurp                  slurp all results into an array
+  -t, --template string        golang text/template string
+  -v, --version                print version
 
 Examples:
   % echo '{"colors": ["red", "green", "blue"]}' | tq '.colors[0]'

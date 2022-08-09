@@ -124,7 +124,7 @@ For example, [Dynamic JSON in Go](https://eagain.net/articles/go-dynamic-json/) 
 
 It may be simpler to use tree.Map instead of json.RawMessage.
 
-```
+```go
 package main
 
 import (
@@ -237,32 +237,30 @@ brew install jarxorg/tree/tq
 
 Download binary
 
-```
+```sh
 VERSION=0.6.3 GOOS=Darwin GOARCH=arm64; curl -fsSL "https://github.com/jarxorg/tree/releases/download/v${VERSION}/tree_${VERSION}_${GOOS}_${GOARCH}.tar.gz" | tar xz tq && mv tq /usr/local/bin
 ```
 
 ### Usage
 
-```
+```sh
 tq is a command-line JSON/YAML processor.
 
 Usage:
   tq [flags] [query] ([file...])
 
 Flags:
-  -e value
-    	edit expression
-  -h	help for tq
-  -i value
-    	input format (json or yaml) (default yaml)
-  -o value
-    	output format (json or yaml) (default json)
-  -r	output raw strings
-  -s	slurp all results into an array
-  -t string
-    	golang text/template string (ignore -o flag)
-  -v	print version
-  -x	expand results
+  -e, --edit stringArray       edit expression
+  -x, --expand                 expand results
+  -h, --help                   help for tq
+  -U, --inplace                update files, inplace
+  -i, --input-format string    input format (json or yaml)
+  -O, --output string          output file
+  -o, --output-format string   output format (json or yaml, default json)
+  -r, --raw                    output raw strings
+  -s, --slurp                  slurp all results into an array
+  -t, --template string        golang text/template string
+  -v, --version                print version
 
 Examples:
   % echo '{"colors": ["red", "green", "blue"]}' | tq '.colors[0]'
@@ -290,3 +288,8 @@ Examples:
 | tq '.store.book[]' | jq '.store.book[]' |
 | tq '.store.book[:2].price' | jq '.store.book[:2][] \| .price' |
 | tq '.store.book[.category == "fiction" and .price < 10].title' | jq '.store.book[] \| select(.category == "fiction" and .price < 10) \| .title' |
+
+
+## Third-party library licenses
+
+- [spf13/pflag](https://github.com/spf13/pflag/blob/master/LICENSE)

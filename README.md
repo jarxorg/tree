@@ -7,11 +7,16 @@ Tree is a simple structure for dealing with dynamic or unknown JSON/YAML in Go.
 
 ## Features
 
-- Parses json/yaml of unknown structure to get to nodes in a chain expression.
+- Parses json/yaml of unknown structure to get to nodes with fluent interface.
 - Syntax similar to Go standard and map and slice.
 - Find function can be specified the [Query](#query) expression.
 - Edit function can be specified the [Edit](#edit) expression.
 - Bundled 'tq' that is a portable command-line JSON/YAML processor.
+
+## Road to 1.0
+
+- Placeholders in query.
+- Merging nodes.
 
 ## Syntax
 

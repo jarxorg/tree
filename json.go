@@ -179,7 +179,6 @@ func MarshalViaJSON(v interface{}) (Node, error) {
 	if err != nil {
 		return nil, err
 	}
-	fmt.Printf("# json.Marshaled %s\n", data)
 	return UnmarshalJSON(data)
 }
 

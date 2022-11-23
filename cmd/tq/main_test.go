@@ -91,6 +91,9 @@ func TestRun(t *testing.T) {
 			},
 			want: mustReadFileString("testdata/book-0.json"),
 		}, {
+			stdin: "testdata/null",
+			args:  []string{"..walk"},
+		}, {
 			args:   []string{"-i", "json", ".", "testdata/invalid-json"},
 			errstr: `failed to evaluate testdata/invalid-json: invalid character 'i' looking for beginning of value`,
 		}, {

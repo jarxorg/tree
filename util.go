@@ -105,6 +105,9 @@ func Walk(n Node, fn WalkFunc) error {
 }
 
 func walk(n Node, lastKeys []interface{}, fn WalkFunc) error {
+	if n == nil {
+		return nil
+	}
 	if err := fn(n, lastKeys); err != nil {
 		if err == SkipWalk {
 			return nil

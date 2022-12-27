@@ -115,7 +115,7 @@ func Test_UnmarshalYAML(t *testing.T) {
 			want: Map{
 				"a": NumberValue(1),
 				"b": BoolValue(true),
-				"c": nil,
+				"c": Nil,
 				"d": Array{
 					StringValue("1"),
 					NumberValue(2),
@@ -136,11 +136,11 @@ e: {"x":"x"}
 				StringValue("1"),
 				NumberValue(2),
 				BoolValue(true),
-				nil,
+				Nil,
 				Map{
 					"a": NumberValue(1),
 					"b": BoolValue(true),
-					"c": nil,
+					"c": Nil,
 				},
 				Array{
 					StringValue("x"),
@@ -155,13 +155,13 @@ e: {"x":"x"}
 `),
 		},
 	}
-	for _, test := range tests {
+	for i, test := range tests {
 		got, err := UnmarshalYAML(test.data)
 		if err != nil {
 			t.Fatal(err)
 		}
 		if !reflect.DeepEqual(got, test.want) {
-			t.Errorf(`Error unmarshaled %#v; want %#v`, got, test.want)
+			t.Errorf(`tests[%d] Error unmarshaled %#v; want %#v`, i, got, test.want)
 		}
 	}
 }
@@ -170,7 +170,7 @@ func Test_Map_UnmarshalYAML(t *testing.T) {
 	want := Map{
 		"a": NumberValue(1),
 		"b": BoolValue(true),
-		"c": nil,
+		"c": Nil,
 	}
 	data := []byte(`a: 1
 b: true

@@ -102,7 +102,7 @@ func Test_UnmarshalJSON(t *testing.T) {
 			want: Map{
 				"a": NumberValue(1),
 				"b": BoolValue(true),
-				"c": nil,
+				"c": Nil,
 				"d": Array{
 					StringValue("1"),
 					NumberValue(2),
@@ -118,11 +118,11 @@ func Test_UnmarshalJSON(t *testing.T) {
 				StringValue("1"),
 				NumberValue(2),
 				BoolValue(true),
-				nil,
+				Nil,
 				Map{
 					"a": NumberValue(1),
 					"b": BoolValue(true),
-					"c": nil,
+					"c": Nil,
 				},
 				Array{
 					StringValue("x"),
@@ -139,7 +139,7 @@ func Test_UnmarshalJSON(t *testing.T) {
 			want: BoolValue(true),
 		}, {
 			data: `null`,
-			want: nil,
+			want: Nil,
 		},
 	}
 	for _, test := range tests {
@@ -157,7 +157,7 @@ func Test_Map_UnmarshalJSON(t *testing.T) {
 	want := Map{
 		"a": NumberValue(1),
 		"b": BoolValue(true),
-		"c": nil,
+		"c": Nil,
 	}
 	data := []byte(`{"a":1,"b":true,"c":null}`)
 	var got Map

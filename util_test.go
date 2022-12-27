@@ -63,7 +63,7 @@ func Test_ToNode(t *testing.T) {
 	}{
 		{
 			v:    nil,
-			want: nil,
+			want: Nil,
 		}, {
 			v:    StringValue("a"),
 			want: StringValue("a"),
@@ -75,10 +75,10 @@ func Test_ToNode(t *testing.T) {
 			want: Array{StringValue("a"), BoolValue(true), NumberValue(1)},
 		},
 	}
-	for _, test := range tests {
+	for i, test := range tests {
 		got := ToNode(test.v)
 		if !reflect.DeepEqual(got, test.want) {
-			t.Errorf(`Error %v ToNode %v; want %v`, test.v, got, test.want)
+			t.Errorf(`tests[%d] Error %#v ToNode %v; want %v`, i, test.v, got, test.want)
 		}
 	}
 }

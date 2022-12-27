@@ -157,7 +157,7 @@ func jsonArray(dec *json.Decoder, a Array) (Array, error) {
 
 func jsonValue(t json.Token) Node {
 	if t == nil {
-		return nil
+		return Nil
 	}
 	switch tt := t.(type) {
 	case string:

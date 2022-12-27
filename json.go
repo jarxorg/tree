@@ -14,8 +14,11 @@ func MarshalJSON(n Node) ([]byte, error) {
 // DecodeJSON decodes JSON as a node using the provided decoder.
 func DecodeJSON(dec *json.Decoder) (Node, error) {
 	t, err := dec.Token()
-	if err != nil || t == nil {
+	if err != nil {
 		return nil, err
+	}
+	if t == nil {
+		return Nil, nil
 	}
 	switch tt := t.(type) {
 	case string:

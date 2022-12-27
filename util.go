@@ -60,7 +60,7 @@ func ToNodeValues(vs ...interface{}) []Node {
 // ToNode converts the specified v to an Node.
 func ToNode(v interface{}) Node {
 	if v == nil {
-		return nil
+		return Nil
 	}
 	switch tv := v.(type) {
 	case Node:
@@ -85,6 +85,38 @@ func ToNode(v interface{}) Node {
 		return m
 	}
 	return ToValue(v)
+}
+
+func ToAny(n Node) interface{} {
+	if n == nil {
+		return nil
+	}
+	t := n.Type()
+	switch t {
+	case TypeArray:
+		a := n.Array()
+		x := make([]interface{}, len(a))
+		for i, v := range a {
+			x[i] = ToAny(v)
+		}
+		return x
+	case TypeMap:
+		m := n.Map()
+		x := make(map[string]interface{}, len(m))
+		for k, v := range m {
+			x[k] = ToAny(v)
+		}
+		return x
+	case TypeNilValue:
+		return nil
+	case TypeStringValue:
+		return n.Value().String()
+	case TypeBoolValue:
+		return n.Value().Bool()
+	case TypeNumberValue:
+		return n.Value().Float64()
+	}
+	panic(fmt.Errorf("unknown type %v", t))
 }
 
 // SkipWalk is used as a return value from WalkFunc to indicate that

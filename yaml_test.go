@@ -30,7 +30,7 @@ func Test_MarshalYAML(t *testing.T) {
 		t.Fatal(err)
 	}
 	if string(got) != want {
-		t.Errorf(`Error %#v marshaled %s; want %s`, n, string(got), want)
+		t.Errorf("for %#v; got %s; want %s", n, string(got), want)
 	}
 }
 
@@ -52,7 +52,7 @@ func Test_Map_MarshalYAML(t *testing.T) {
 		t.Fatal(err)
 	}
 	if string(got) != want {
-		t.Errorf(`Error %#v marshaled %s; want %s`, n, string(got), want)
+		t.Errorf("for %#v; got %s; want %s", n, string(got), want)
 	}
 }
 
@@ -71,7 +71,7 @@ func Test_Array_MarshalYAML(t *testing.T) {
 		t.Fatal(err)
 	}
 	if string(got) != want {
-		t.Errorf(`Error %#v marshaled %s; want %s`, n, string(got), want)
+		t.Errorf("for %#v; marshaled %s; want %s", n, string(got), want)
 	}
 }
 
@@ -93,15 +93,12 @@ func Test_DecodeYAML_Errors(t *testing.T) {
 	}
 	for i, test := range tests {
 		dec := yaml.NewDecoder(bytes.NewReader(test.data))
-		got, err := DecodeYAML(dec)
-		if got != nil {
-			t.Errorf(`Error tests[%d] returns not nil %#v`, i, got)
-		}
+		_, err := DecodeYAML(dec)
 		if err == nil {
-			t.Fatalf(`Error tests[%d] returns no error`, i)
+			t.Fatalf("tests[%d] no error", i)
 		}
 		if err.Error() != test.errstr {
-			t.Errorf(`Error tests[%d] returns error %s; want %s`, i, err.Error(), test.errstr)
+			t.Errorf("tests[%d] got %s; want %s", i, err.Error(), test.errstr)
 		}
 	}
 }
@@ -161,7 +158,7 @@ e: {"x":"x"}
 			t.Fatal(err)
 		}
 		if !reflect.DeepEqual(got, test.want) {
-			t.Errorf(`tests[%d] Error unmarshaled %#v; want %#v`, i, got, test.want)
+			t.Errorf("tests[%d] got %#v; want %#v", i, got, test.want)
 		}
 	}
 }
@@ -181,7 +178,7 @@ c: null
 		t.Fatal(err)
 	}
 	if !reflect.DeepEqual(got, want) {
-		t.Errorf(`Error unmarshaled %#v; want %#v`, got, want)
+		t.Errorf("got %#v; want %#v", got, want)
 	}
 }
 
@@ -200,7 +197,7 @@ func Test_Array_UnmarshalYAML(t *testing.T) {
 		t.Fatal(err)
 	}
 	if !reflect.DeepEqual(got, want) {
-		t.Errorf(`Error unmarshaled %#v; want %#v`, got, want)
+		t.Errorf("got %#v; want %#v", got, want)
 	}
 }
 
@@ -248,7 +245,7 @@ func Test_MarshalViaYAML(t *testing.T) {
 			t.Fatal(err)
 		}
 		if !reflect.DeepEqual(got, test.want) {
-			t.Errorf("tests[%d] failed to marshal via yaml %#v; want %#v", i, got, test.want)
+			t.Errorf("tests[%d] got %#v; want %#v", i, got, test.want)
 		}
 	}
 }
@@ -278,6 +275,6 @@ func Test_UnmarshalViaYAML(t *testing.T) {
 		t.Fatal(err)
 	}
 	if !reflect.DeepEqual(got, want) {
-		t.Errorf("failed to unmarshal via yaml %#v; want %#v", got, want)
+		t.Errorf("got %#v; want %#v", got, want)
 	}
 }

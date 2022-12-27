@@ -41,31 +41,31 @@ func Test_Value(t *testing.T) {
 		v := test.value
 		vv := v.Value()
 		if tt := v.Type(); tt&TypeValue == 0 {
-			t.Errorf(`tests[%d] Type returns %v; want TypeValue`, i, tt)
+			t.Errorf("tests[%d] Type got %v; want TypeValue", i, tt)
 		}
 		if a := v.Array(); a != nil {
-			t.Errorf(`tests[%d] Array returns %v; want nil`, i, a)
+			t.Errorf("tests[%d] Array got %v; want nil", i, a)
 		}
 		if m := v.Map(); m != nil {
-			t.Errorf(`tests[%d] Map returns %v; want nil`, i, m)
+			t.Errorf("tests[%d] Map got %v; want nil", i, m)
 		}
 		if vv.(Node) != v {
-			t.Errorf(`tests[%d] Value returns %v; want %v`, i, vv, v)
+			t.Errorf("tests[%d] Value got %v; want %v", i, vv, v)
 		}
 		if b := vv.Bool(); b != test.b {
-			t.Errorf(`tests[%d] Bool returns %v; want %v`, i, b, test.b)
+			t.Errorf("tests[%d] Bool got %v; want %v", i, b, test.b)
 		}
 		if ii := vv.Int(); ii != test.i {
-			t.Errorf(`tests[%d] Int returns %v; want %v`, i, ii, test.i)
+			t.Errorf("tests[%d] Int got %v; want %v", i, ii, test.i)
 		}
 		if i64 := vv.Int64(); i64 != test.i64 {
-			t.Errorf(`tests[%d] Int64 returns %v; want %v`, i, i64, test.i64)
+			t.Errorf("tests[%d] Int64 got %v; want %v", i, i64, test.i64)
 		}
 		if f64 := vv.Float64(); f64 != test.f64 {
-			t.Errorf(`tests[%d] Float64 returns %v; want %v`, i, f64, test.f64)
+			t.Errorf("tests[%d] Float64 got %v; want %v", i, f64, test.f64)
 		}
 		if s := vv.String(); s != test.s {
-			t.Errorf(`tests[%d] String returns %v; want %v`, i, s, test.s)
+			t.Errorf("tests[%d] String got %v; want %v", i, s, test.s)
 		}
 	}
 }
@@ -138,7 +138,7 @@ func Test_Value_Compare(t *testing.T) {
 	for i, test := range tests {
 		got := test.n.Compare(test.op, test.v)
 		if got != test.want {
-			t.Errorf(`tests[%d] returns %v; want %v`, i, got, test.want)
+			t.Errorf("tests[%d] got %v; want %v", i, got, test.want)
 		}
 	}
 }
@@ -166,10 +166,10 @@ func Test_Value_Find(t *testing.T) {
 	for i, test := range tests {
 		got, err := test.n.Find(test.expr)
 		if err != nil {
-			t.Fatal(err)
+			t.Fatalf("tests[%d] %v", i, err)
 		}
 		if !reflect.DeepEqual(got, test.want) {
-			t.Errorf("tests[%d] returns %#v; want %#v", i, got, test.want)
+			t.Errorf("tests[%d] got %#v; want %#v", i, got, test.want)
 		}
 	}
 }

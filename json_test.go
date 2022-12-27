@@ -23,7 +23,7 @@ func Test_MarshalJSON(t *testing.T) {
 		t.Fatal(err)
 	}
 	if string(got) != want {
-		t.Errorf(`Error %#v marshaled %s; want %s`, n, string(got), want)
+		t.Errorf("got %s; want %s", string(got), want)
 	}
 }
 
@@ -41,7 +41,7 @@ func Test_Map_MarshalJSON(t *testing.T) {
 		t.Fatal(err)
 	}
 	if string(got) != want {
-		t.Errorf(`Error %#v marshaled %s; want %s`, n, string(got), want)
+		t.Errorf("got %s; want %s", string(got), want)
 	}
 }
 
@@ -57,7 +57,7 @@ func Test_Array_MarshalJSON(t *testing.T) {
 		t.Fatal(err)
 	}
 	if string(got) != want {
-		t.Errorf(`Error %#v marshaled %s; want %s`, n, string(got), want)
+		t.Errorf("got %s; want %s", string(got), want)
 	}
 }
 
@@ -79,15 +79,12 @@ func Test_DecodeJSON_Errors(t *testing.T) {
 	}
 	for i, test := range tests {
 		dec := json.NewDecoder(bytes.NewReader(test.data))
-		got, err := DecodeJSON(dec)
-		if got != nil {
-			t.Errorf(`Error tests[%d] returns not nil %#v`, i, got)
-		}
+		_, err := DecodeJSON(dec)
 		if err == nil {
-			t.Fatalf(`Error tests[%d] returns no error`, i)
+			t.Fatalf("tests[%d] no error", i)
 		}
 		if err.Error() != test.errstr {
-			t.Errorf(`Error tests[%d] returns error %s; want %s`, i, err.Error(), test.errstr)
+			t.Errorf("tests[%d] got %s; want %s", i, err.Error(), test.errstr)
 		}
 	}
 }
@@ -142,13 +139,13 @@ func Test_UnmarshalJSON(t *testing.T) {
 			want: Nil,
 		},
 	}
-	for _, test := range tests {
+	for i, test := range tests {
 		got, err := UnmarshalJSON([]byte(test.data))
 		if err != nil {
-			t.Fatal(err)
+			t.Fatalf("tests[%d] %v", i, err)
 		}
 		if !reflect.DeepEqual(got, test.want) {
-			t.Errorf(`Error unmarshaled %#v; want %#v`, got, test.want)
+			t.Errorf("tests[%d] got %#v; want %#v", i, got, test.want)
 		}
 	}
 }
@@ -165,7 +162,7 @@ func Test_Map_UnmarshalJSON(t *testing.T) {
 		t.Fatal(err)
 	}
 	if !reflect.DeepEqual(got, want) {
-		t.Errorf(`Error unmarshaled %#v; want %#v`, got, want)
+		t.Errorf("got %#v; want %#v", got, want)
 	}
 }
 
@@ -181,7 +178,7 @@ func Test_Array_UnmarshalJSON(t *testing.T) {
 		t.Fatal(err)
 	}
 	if !reflect.DeepEqual(got, want) {
-		t.Errorf(`Error unmarshaled %#v; want %#v`, got, want)
+		t.Errorf("got %#v; want %#v", got, want)
 	}
 }
 
@@ -226,10 +223,10 @@ func Test_MarshalViaJSON(t *testing.T) {
 	for i, test := range tests {
 		got, err := MarshalViaJSON(test.v)
 		if err != nil {
-			t.Fatal(err)
+			t.Fatalf("tests[%d] %v", i, err)
 		}
 		if !reflect.DeepEqual(got, test.want) {
-			t.Errorf("tests[%d] failed to marshal via json %#v; want %#v", i, got, test.want)
+			t.Errorf("tests[%d] got %#v; want %#v", i, got, test.want)
 		}
 	}
 }
@@ -259,6 +256,6 @@ func Test_UnmarshalViaJSON(t *testing.T) {
 		t.Fatal(err)
 	}
 	if !reflect.DeepEqual(got, want) {
-		t.Errorf("failed to unmarshal via json %#v; want %#v", got, want)
+		t.Errorf("got %#v; want %#v", got, want)
 	}
 }

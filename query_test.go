@@ -103,18 +103,18 @@ func Test_Query(t *testing.T) {
 		got, err := test.q.Exec(test.n)
 		if test.errstr != "" {
 			if err == nil {
-				t.Fatalf("tests[%d]: %s returns no error", i, test.q)
+				t.Fatalf("tests[%d] for %v; no error", i, test.q)
 			}
 			if err.Error() != test.errstr {
-				t.Errorf(`tests[%d]: %s returns error %s; want %s`, i, test.q, err.Error(), test.errstr)
+				t.Errorf("tests[%d] for %v; got %s; want %s", i, test.q, err.Error(), test.errstr)
 			}
 			continue
 		}
 		if err != nil {
-			t.Fatal(err, i)
+			t.Fatalf("tests[%d] %v", i, err)
 		}
 		if !reflect.DeepEqual(got, test.want) {
-			t.Errorf(`tests[%d]: %s returns %v; want %v`, i, test.q, got, test.want)
+			t.Errorf("tests[%d] for %v; got %v; want %v", i, test.q, got, test.want)
 		}
 	}
 }
@@ -167,7 +167,7 @@ func Test_Query_String(t *testing.T) {
 	for i, test := range tests {
 		got := test.q.String()
 		if got != test.want {
-			t.Errorf(`tests[%d]: returns %v; want %v`, i, got, test.want)
+			t.Errorf("tests[%d] got %v; want %v", i, got, test.want)
 		}
 	}
 }
@@ -256,10 +256,10 @@ func Test_ParseQuery(t *testing.T) {
 	for i, test := range tests {
 		got, err := ParseQuery(test.expr)
 		if err != nil {
-			t.Fatal(err)
+			t.Fatalf("tests[%d] %v", i, err)
 		}
 		if !reflect.DeepEqual(got, test.want) {
-			t.Errorf(`tests[%d]: "%s" returns %#v; want %#v`, i, test.expr, got, test.want)
+			t.Errorf("tests[%d] for %v; got %#v; want %#v", i, test.expr, got, test.want)
 		}
 	}
 }
@@ -299,15 +299,12 @@ func Test_ParseQuery_Errors(t *testing.T) {
 		},
 	}
 	for i, test := range tests {
-		got, err := ParseQuery(test.expr)
-		if got != nil {
-			t.Errorf(`tests[%d]: returns not nil %#v`, i, got)
-		}
+		_, err := ParseQuery(test.expr)
 		if err == nil {
-			t.Fatalf(`tests[%d]: returns no error`, i)
+			t.Fatalf("tests[%d] no error", i)
 		}
 		if err.Error() != test.errstr {
-			t.Errorf(`tests[%d]: returns error %s; want %s`, i, err.Error(), test.errstr)
+			t.Errorf("tests[%d] got %s; want %s", i, err.Error(), test.errstr)
 		}
 	}
 }
@@ -449,10 +446,10 @@ func Test_Find(t *testing.T) {
 	for i, test := range tests {
 		got, err := Find(n, test.expr)
 		if err != nil {
-			t.Fatalf("tests[%d]: %+v", i, err)
+			t.Fatalf("tests[%d] %+v", i, err)
 		}
 		if !reflect.DeepEqual(got, test.want) {
-			t.Errorf("tests[%d]: returns %#v; want %#v", i, got, test.want)
+			t.Errorf("tests[%d] got %#v; want %#v", i, got, test.want)
 		}
 	}
 }
@@ -732,19 +729,19 @@ func Test_Edit(t *testing.T) {
 		err := Edit(&(test.n), test.expr)
 		if test.errstr != "" {
 			if err == nil {
-				t.Fatalf("tests[%d] %s: no error; want %s", i, test.expr, test.errstr)
+				t.Fatalf("tests[%d] for %v; no error", i, test.expr)
 			}
 			if err.Error() != test.errstr {
-				t.Errorf("tests[%d] %s: %s; want %s", i, test.expr, err.Error(), test.errstr)
+				t.Errorf("tests[%d] for %v; got %s; want %s", i, test.expr, err.Error(), test.errstr)
 			}
 			continue
 		}
 		if err != nil {
-			t.Fatalf("tests[%d] %s: %+v", i, test.expr, err)
+			t.Fatalf("tests[%d] for %v; %+v", i, test.expr, err)
 		}
 		got := test.n
 		if !reflect.DeepEqual(got, test.want) {
-			t.Errorf("tests[%d] %s: returns %#v; want %#v", i, test.expr, got, test.want)
+			t.Errorf("tests[%d] for %v; got %#v; want %#v", i, test.expr, got, test.want)
 		}
 	}
 }

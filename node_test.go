@@ -56,7 +56,7 @@ func Test_Type(t *testing.T) {
 	}
 	for i, test := range tests {
 		if got := test.is(); got != test.want {
-			t.Errorf(`tests[%d]: got %v; want %v`, i, got, test.want)
+			t.Errorf("tests[%d] got %v; want %v", i, got, test.want)
 		}
 	}
 }
@@ -126,19 +126,19 @@ func Test_Node(t *testing.T) {
 	for i, test := range tests {
 		n := test.n
 		if n.IsNil() != test.isNil {
-			t.Errorf(`tests[%d]: IsNil returns %v; want %v`, i, n.IsNil(), test.isNil)
+			t.Errorf("tests[%d] IsNil got %v; want %v", i, n.IsNil(), test.isNil)
 		}
 		if tt := n.Type(); tt != test.t {
-			t.Errorf(`tests[%d]: Type returns %v; want %v`, i, tt, test.t)
+			t.Errorf("tests[%d] Type got %v; want %v", i, tt, test.t)
 		}
 		if aa := n.Array(); !reflect.DeepEqual(aa, test.a) {
-			t.Errorf(`tests[%d]: Array returns %v; want %v`, i, aa, test.a)
+			t.Errorf("tests[%d] Array got %v; want %v", i, aa, test.a)
 		}
 		if mm := n.Map(); !reflect.DeepEqual(mm, test.m) {
-			t.Errorf(`tests[%d]: Map returns %v; want %v`, i, mm, test.m)
+			t.Errorf("tests[%d] Map got %v; want %v", i, mm, test.m)
 		}
 		if vv := n.Value(); !reflect.DeepEqual(vv, test.v) {
-			t.Errorf(`tests[%d]: Value returns %v; want %v`, i, vv, test.v)
+			t.Errorf("tests[%d] Value got %v; want %v", i, vv, test.v)
 		}
 	}
 }
@@ -236,11 +236,11 @@ func Test_Node_Get(t *testing.T) {
 	}
 	for i, test := range tests {
 		if test.n.Has(test.keys...) != test.has {
-			t.Errorf("tests[%d]: has %v; want %v", i, !test.has, test.has)
+			t.Errorf("tests[%d] Has got %v; want %v", i, !test.has, test.has)
 		}
 		got := test.n.Get(test.keys...)
 		if !reflect.DeepEqual(got, test.want) {
-			t.Errorf("tests[%d]: got %q; want %q", i, got, test.want)
+			t.Errorf("tests[%d] Get got %v; want %v", i, got, test.want)
 		}
 	}
 }
@@ -274,17 +274,17 @@ func Test_Node_Each(t *testing.T) {
 			return nil
 		})
 		if err != nil {
-			t.Fatal(err)
+			t.Fatalf("tests[%d] %v", i, err)
 		}
 		if !reflect.DeepEqual(got, test.want) {
-			t.Errorf(`tests[%d]: got %v; want %v`, i, got, test.want)
+			t.Errorf("tests[%d] got %v; want %v", i, got, test.want)
 		}
 		wantErr := fmt.Errorf("test%d", i)
 		gotErr := test.n.Each(func(key interface{}, v Node) error {
 			return wantErr
 		})
 		if wantErr != gotErr {
-			t.Errorf(`tests[%d]: got error %v; want %v`, i, gotErr, wantErr)
+			t.Errorf("tests[%d] got %v; want %v", i, gotErr, wantErr)
 		}
 	}
 }
@@ -308,10 +308,10 @@ func Test_Node_Find(t *testing.T) {
 	for i, test := range tests {
 		got, err := test.n.Find(test.expr)
 		if err != nil {
-			t.Fatal(err)
+			t.Fatalf("tests[%d] %v", i, err)
 		}
 		if !reflect.DeepEqual(got, test.want) {
-			t.Errorf("tests[%d]: got %#v; want %#v", i, got, test.want)
+			t.Errorf("tests[%d] got %#v; want %#v", i, got, test.want)
 		}
 	}
 }
@@ -343,19 +343,19 @@ func Test_EditorNode_Append(t *testing.T) {
 		}
 		if test.errstr != "" {
 			if err == nil {
-				t.Fatalf("tests[%d]: returns no error", i)
+				t.Fatalf("tests[%d] no error", i)
 			}
 			if err.Error() != test.errstr {
-				t.Errorf(`tests[%d]: returns error %s; want %s`, i, err.Error(), test.errstr)
+				t.Errorf("tests[%d] got %s; want %s", i, err.Error(), test.errstr)
 			}
 			continue
 		}
 		if err != nil {
-			t.Fatal(err, i)
+			t.Fatalf("tests[%d] %v", i, err)
 		}
 		got := test.n
 		if !reflect.DeepEqual(got, test.want) {
-			t.Errorf(`tests[%d]: got %v; want %v`, i, got, test.want)
+			t.Errorf("tests[%d] got %v; want %v", i, got, test.want)
 		}
 	}
 }
@@ -413,19 +413,19 @@ func Test_EditorNode_Set(t *testing.T) {
 		}
 		if test.errstr != "" {
 			if err == nil {
-				t.Fatalf("tests[%d]: returns no error", i)
+				t.Fatalf("tests[%d] no error", i)
 			}
 			if err.Error() != test.errstr {
-				t.Errorf(`tests[%d]: returns error %s; want %s`, i, err.Error(), test.errstr)
+				t.Errorf(`tests[%d] got %s; want %s`, i, err.Error(), test.errstr)
 			}
 			continue
 		}
 		if err != nil {
-			t.Fatal(err, i)
+			t.Fatalf("tests[%d] %v", i, err)
 		}
 		got := test.n
 		if !reflect.DeepEqual(got, test.want) {
-			t.Errorf(`tests[%d]: got %v; want %v`, i, got, test.want)
+			t.Errorf("tests[%d] got %v; want %v", i, got, test.want)
 		}
 	}
 }
@@ -474,19 +474,19 @@ func Test_EditorNode_Delete(t *testing.T) {
 		}
 		if test.errstr != "" {
 			if err == nil {
-				t.Fatalf("tests[%d]: returns no error", i)
+				t.Fatalf("tests[%d] no error", i)
 			}
 			if err.Error() != test.errstr {
-				t.Errorf(`tests[%d]: returns error %s; want %s`, i, err.Error(), test.errstr)
+				t.Errorf("tests[%d] got %s; want %s", i, err.Error(), test.errstr)
 			}
 			continue
 		}
 		if err != nil {
-			t.Fatal(err, i)
+			t.Fatalf("tests[%d] %v", i, err)
 		}
 		got := test.n
 		if !reflect.DeepEqual(got, test.want) {
-			t.Errorf(`tests[%d]: got %v; want %v`, i, got, test.want)
+			t.Errorf("tests[%d] got %v; want %v", i, got, test.want)
 		}
 	}
 }

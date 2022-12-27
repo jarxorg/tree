@@ -48,10 +48,10 @@ func Test_ToValue(t *testing.T) {
 			want: StringValue("struct {}{}"),
 		},
 	}
-	for _, test := range tests {
+	for i, test := range tests {
 		got := ToValue(test.v)
 		if got != test.want {
-			t.Errorf(`Error ToValue(%#v) returns %#v; want %#v`, test.v, got, test.want)
+			t.Errorf("tests[%d] for %v; got %#v; want %#v", i, test.v, got, test.want)
 		}
 	}
 }
@@ -78,7 +78,7 @@ func Test_ToNode(t *testing.T) {
 	for i, test := range tests {
 		got := ToNode(test.v)
 		if !reflect.DeepEqual(got, test.want) {
-			t.Errorf(`tests[%d] Error %#v ToNode %v; want %v`, i, test.v, got, test.want)
+			t.Errorf("tests[%d] for %v; got %v; want %v", i, test.v, got, test.want)
 		}
 	}
 }
@@ -136,10 +136,10 @@ func Test_Walk(t *testing.T) {
 		i++
 
 		if !reflect.DeepEqual(n, test.n) {
-			t.Errorf(`walk[%d] returns node %#v; want %#v`, i, n, test.n)
+			t.Errorf("walk[%d] got %#v; want %#v", i, n, test.n)
 		}
 		if !reflect.DeepEqual(keys, test.keys) {
-			t.Errorf(`walk[%d] returns keys %#v; want %#v`, i, keys, test.n)
+			t.Errorf("walk[%d] got %#v; want %#v", i, keys, test.n)
 		}
 		if test.skip {
 			return SkipWalk
@@ -149,7 +149,6 @@ func Test_Walk(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-
 	if len(tests) != i {
 		t.Errorf("fn is called %d times; want %d", i, len(tests))
 	}
@@ -184,18 +183,18 @@ func Test_regexpMatchString(t *testing.T) {
 		got, err := regexpMatchString(test.expr, test.value)
 		if test.errstr != "" {
 			if err == nil {
-				t.Fatalf("tests[%d] %q no error", i, test.expr)
+				t.Fatalf("tests[%d] for %v; no error", i, test.expr)
 			}
 			if err.Error() != test.errstr {
-				t.Errorf(`tests[%d] %q error %q want %q`, i, test.expr, err.Error(), test.errstr)
+				t.Errorf(`tests[%d] for %v; got %v want %v`, i, test.expr, err.Error(), test.errstr)
 			}
 			continue
 		}
 		if err != nil {
-			t.Fatalf("tests[%d] %q error %q", i, test.expr, err)
+			t.Fatalf("tests[%d] for %v; %+v", i, test.expr, err)
 		}
 		if got != test.want {
-			t.Errorf("tests[%d] %q returns %v; want %v", i, test.expr, got, test.want)
+			t.Errorf("tests[%d] for %v; got %v; want %v", i, test.expr, got, test.want)
 		}
 	}
 }

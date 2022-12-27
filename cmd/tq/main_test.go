@@ -113,7 +113,7 @@ func TestRun(t *testing.T) {
 		if test.stdin != "" {
 			in, err := os.Open(test.stdin)
 			if err != nil {
-				t.Fatal(err)
+				t.Fatalf("tests[%d] %v", i, err)
 			}
 			defer in.Close()
 			os.Stdin = in
@@ -129,7 +129,7 @@ func TestRun(t *testing.T) {
 		err := r.run(append([]string{"tq"}, test.args...))
 		if test.errstr != "" {
 			if err == nil {
-				t.Fatalf("tests[%d] no error; want %s", i, test.errstr)
+				t.Fatalf("tests[%d] no error", i)
 			}
 			if err.Error() != test.errstr {
 				t.Errorf(`tests[%d] error %s; want %s`, i, err.Error(), test.errstr)
@@ -137,7 +137,7 @@ func TestRun(t *testing.T) {
 			return
 		}
 		if err != nil {
-			t.Fatalf("tests[%d] error %v", i, err)
+			t.Fatalf("tests[%d] %v", i, err)
 		}
 		if got := buf.String(); got != test.want {
 			t.Errorf("tests[%d] got %s; want %s", i, got, test.want)

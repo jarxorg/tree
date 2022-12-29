@@ -114,6 +114,7 @@ type runner struct {
 	isSlurp      bool
 	isRaw        bool
 	isInplace    bool
+	isColor      bool
 	outputFile   string
 	tmplText     string
 	inputFormat  string
@@ -146,6 +147,7 @@ func (r *runner) initFlagSet(args []string) error {
 	s.BoolVarP(&r.isSlurp, "slurp", "s", false, "slurp all results into an array")
 	s.BoolVarP(&r.isRaw, "raw", "r", false, "output raw strings")
 	s.BoolVarP(&r.isInplace, "inplace", "U", false, "update files, inplace")
+	s.BoolVarP(&r.isColor, "color", "c", false, "output with colors")
 	s.StringVarP(&r.outputFile, "output", "O", "", "output file")
 	s.StringVarP(&r.tmplText, "template", "t", "", "golang text/template string")
 	s.StringVarP(&r.inputFormat, "input-format", "i", "", "input format (json or yaml)")
@@ -392,20 +394,26 @@ func (r *runner) output(node tree.Node) error {
 	return r.outputJSON(node)
 }
 
-func (r *runner) outputYAML(node tree.Node) error {
+func (r *runner) outputYAML(n tree.Node) error {
 	if r.outputYAMLCalled > 0 {
 		if _, err := fmt.Fprintln(r.out, "---"); err != nil {
 			return err
 		}
 	}
 	r.outputYAMLCalled++
-	return yaml.NewEncoder(r.out).Encode(node)
+	if r.isColor {
+		return tree.OutputColorYAML(r.out, n)
+	}
+	return yaml.NewEncoder(r.out).Encode(n)
 }
 
-func (r *runner) outputJSON(node tree.Node) error {
+func (r *runner) outputJSON(n tree.Node) error {
+	if r.isColor {
+		return tree.OutputColorJSON(r.out, n)
+	}
 	enc := json.NewEncoder(r.out)
 	enc.SetIndent("", "  ")
-	return enc.Encode(node)
+	return enc.Encode(n)
 }
 
 func main() {

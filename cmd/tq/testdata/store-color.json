@@ -1,0 +1,36 @@
+{
+  [1;34m"store"[0m: {
+    [1;34m"bicycle"[0m: {
+      [1;34m"color"[0m: [0;32m"red"[0m,
+      [1;34m"price"[0m: 19.95
+    },
+    [1;34m"book"[0m: [
+      {
+        [1;34m"author"[0m: [0;32m"Nigel Rees"[0m,
+        [1;34m"category"[0m: [0;32m"reference"[0m,
+        [1;34m"price"[0m: 8.95,
+        [1;34m"title"[0m: [0;32m"Sayings of the Century"[0m
+      },
+      {
+        [1;34m"author"[0m: [0;32m"Evelyn Waugh"[0m,
+        [1;34m"category"[0m: [0;32m"fiction"[0m,
+        [1;34m"price"[0m: 12.99,
+        [1;34m"title"[0m: [0;32m"Sword of Honour"[0m
+      },
+      {
+        [1;34m"author"[0m: [0;32m"Herman Melville"[0m,
+        [1;34m"category"[0m: [0;32m"fiction"[0m,
+        [1;34m"isbn"[0m: [0;32m"0-553-21311-3"[0m,
+        [1;34m"price"[0m: 8.99,
+        [1;34m"title"[0m: [0;32m"Moby Dick"[0m
+      },
+      {
+        [1;34m"author"[0m: [0;32m"J. R. R. Tolkien"[0m,
+        [1;34m"category"[0m: [0;32m"fiction"[0m,
+        [1;34m"isbn"[0m: [0;32m"0-395-19395-8"[0m,
+        [1;34m"price"[0m: 22.99,
+        [1;34m"title"[0m: [0;32m"The Lord of the Rings"[0m
+      }
+    ]
+  }
+}

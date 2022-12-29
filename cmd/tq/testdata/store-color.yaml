@@ -1,0 +1,23 @@
+[1;34mstore[0m:
+  [1;34mbicycle[0m:
+    [1;34mcolor[0m: [0;32mred[0m
+    [1;34mprice[0m: 19.95
+  [1;34mbook[0m:
+    - [1;34mauthor[0m: [0;32m"Nigel Rees"[0m
+      [1;34mcategory[0m: [0;32mreference[0m
+      [1;34mprice[0m: 8.95
+      [1;34mtitle[0m: [0;32m"Sayings of the Century"[0m
+    - [1;34mauthor[0m: [0;32m"Evelyn Waugh"[0m
+      [1;34mcategory[0m: [0;32mfiction[0m
+      [1;34mprice[0m: 12.99
+      [1;34mtitle[0m: [0;32m"Sword of Honour"[0m
+    - [1;34mauthor[0m: [0;32m"Herman Melville"[0m
+      [1;34mcategory[0m: [0;32mfiction[0m
+      [1;34misbn[0m: [0;32m"0-553-21311-3"[0m
+      [1;34mprice[0m: 8.99
+      [1;34mtitle[0m: [0;32m"Moby Dick"[0m
+    - [1;34mauthor[0m: [0;32m"J. R. R. Tolkien"[0m
+      [1;34mcategory[0m: [0;32mfiction[0m
+      [1;34misbn[0m: [0;32m"0-395-19395-8"[0m
+      [1;34mprice[0m: 22.99
+      [1;34mtitle[0m: [0;32m"The Lord of the Rings"[0m

@@ -4,6 +4,7 @@ Usage:
   tq [flags] [query] ([file...])
 
 Flags:
+  -c, --color                  output with colors
   -e, --edit stringArray       edit expression
   -x, --expand                 expand results
   -h, --help                   help for tq

@@ -82,6 +82,14 @@ func TestRun(t *testing.T) {
 			},
 			want: mustReadFileString("testdata/book.csv"),
 		}, {
+			stdin: "testdata/store.json",
+			args:  []string{"-c", "."},
+			want:  mustReadFileString("testdata/store-color.json"),
+		}, {
+			stdin: "testdata/store.yaml",
+			args:  []string{"-c", "."},
+			want:  mustReadFileString("testdata/store-color.yaml"),
+		}, {
 			stdin: "testdata/empty-object.json",
 			args: []string{
 				"-e", `.author = "Nigel Rees"`,

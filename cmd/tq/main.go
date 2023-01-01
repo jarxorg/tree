@@ -80,7 +80,7 @@ func (f *inputFiles) nextReader() (io.ReadSeekCloser, error) {
 	}
 	f.filename = f.filenames[f.off]
 	f.off++
-	if f.filename == "-" {
+	if f.filename == filenameStdin {
 		return newStdinReader()
 	}
 	return os.Open(f.filename)
@@ -115,6 +115,10 @@ type runner struct {
 	isRaw        bool
 	isInplace    bool
 	isColor      bool
+	isInputJSON  bool
+	isInputYAML  bool
+	isOutputJSON bool
+	isOutputYAML bool
 	outputFile   string
 	tmplText     string
 	inputFormat  string
@@ -148,6 +152,10 @@ func (r *runner) initFlagSet(args []string) error {
 	s.BoolVarP(&r.isRaw, "raw", "r", false, "output raw strings")
 	s.BoolVarP(&r.isInplace, "inplace", "U", false, "update files, inplace")
 	s.BoolVarP(&r.isColor, "color", "c", false, "output with colors")
+	s.BoolVarP(&r.isInputJSON, "input-json", "j", false, "alias --input-format json")
+	s.BoolVarP(&r.isInputYAML, "input-yaml", "y", false, "alias --input-format yaml")
+	s.BoolVarP(&r.isOutputJSON, "output-json", "J", false, "alias --output-format json")
+	s.BoolVarP(&r.isOutputYAML, "output-yaml", "Y", false, "alias --output-format yaml")
 	s.StringVarP(&r.outputFile, "output", "O", "", "output file")
 	s.StringVarP(&r.tmplText, "template", "t", "", "golang text/template string")
 	s.StringVarP(&r.inputFormat, "input-format", "i", "", "input format (json or yaml)")
@@ -259,10 +267,10 @@ func (r *runner) evaluateInputFiles(f *inputFiles) error {
 }
 
 func (r *runner) evaluate(in io.ReadSeekCloser) error {
-	switch r.inputFormat {
-	case "json":
+	if r.inputFormat == "json" || r.isInputJSON {
 		return r.evaluateJSON(in)
-	case "yaml":
+	}
+	if r.inputFormat == "yaml" || r.isInputYAML {
 		return r.evaluateYAML(in)
 	}
 	fns := []func(io.Reader) error{
@@ -383,12 +391,7 @@ func (r *runner) output(node tree.Node) error {
 		}
 		return nil
 	}
-	outputFormat := r.outputFormat
-	if outputFormat == "" {
-		outputFormat = r.guessFormat
-	}
-	switch outputFormat {
-	case "yaml":
+	if r.outputFormat == "yaml" || r.isOutputYAML || r.guessFormat == "yaml" {
 		return r.outputYAML(node)
 	}
 	return r.outputJSON(node)

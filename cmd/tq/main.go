@@ -398,7 +398,7 @@ func (r *runner) output(node tree.Node) error {
 }
 
 func (r *runner) outputYAML(n tree.Node) error {
-	if r.outputYAMLCalled > 0 {
+	if r.outputYAMLCalled > 0 && !r.isInplace {
 		if _, err := fmt.Fprintln(r.out, "---"); err != nil {
 			return err
 		}

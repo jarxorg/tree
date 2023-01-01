@@ -309,13 +309,18 @@ Usage:
   tq [flags] [query] ([file...])
 
 Flags:
+  -c, --color                  output with colors
   -e, --edit stringArray       edit expression
   -x, --expand                 expand results
   -h, --help                   help for tq
   -U, --inplace                update files, inplace
   -i, --input-format string    input format (json or yaml)
+  -j, --input-json             alias --input-format json
+  -y, --input-yaml             alias --input-format yaml
   -O, --output string          output file
   -o, --output-format string   output format (json or yaml, default json)
+  -J, --output-json            alias --output-format json
+  -Y, --output-yaml            alias --output-format yaml
   -r, --raw                    output raw strings
   -s, --slurp                  slurp all results into an array
   -t, --template string        golang text/template string
@@ -337,6 +342,7 @@ Examples:
       "blue"
     ]
   }
+
 ```
 
 ### for jq user

@@ -201,6 +201,9 @@ func ExampleFind() {
 | ..author \| [0] | The first author | "Nigel Rees" |
 | .store.book[(.category == "fiction" or .category == "reference") and .price < 10].title | All titles of books these are categoried into "fiction", "reference" and price < 10 | "Sayings of the Century", "Moby Dick" |
 | .store.book[.title ~= "^S"].title | Titles beginning with "S" | "Sayings of the Century", "Sword of Honour" |
+| .store.book.count() | Count books | 4 |
+| .store.book[0].keys() | Sorted keys of the first book | ["author", "category", "price", "title"] |
+| .store.book[0].values() | Values of the first book | ["Nigel Rees", "reference", 8.95, "Sayings of the Century"] |
 
 #### Illustrative Object
 

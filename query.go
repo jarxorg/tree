@@ -230,6 +230,70 @@ func (q SlurpQuery) String() string {
 	return " | "
 }
 
+type CountQuery struct{}
+
+func (q CountQuery) Exec(n Node) ([]Node, error) {
+	switch n.Type() {
+	case TypeArray:
+		return ToNodeValues(len(n.Array())), nil
+	case TypeMap:
+		return ToNodeValues(len(n.Map())), nil
+	}
+	return ToNodeValues(0), nil
+}
+
+func (q CountQuery) String() string {
+	return "count()"
+}
+
+type KeysQuery struct{}
+
+func (q KeysQuery) Exec(n Node) ([]Node, error) {
+	switch n.Type() {
+	case TypeArray:
+		a := n.Array()
+		keys := make(Array, len(a))
+		for i := 0; i < len(a); i++ {
+			keys[i] = NumberValue(i)
+		}
+		return []Node{keys}, nil
+	case TypeMap:
+		strKeys := n.Map().Keys()
+		keys := make(Array, len(strKeys))
+		for i := range strKeys {
+			keys[i] = StringValue(strKeys[i])
+		}
+		return []Node{keys}, nil
+	}
+	return nil, nil
+}
+
+func (q KeysQuery) String() string {
+	return "keys()"
+}
+
+type ValuesQuery struct{}
+
+func (q ValuesQuery) Exec(n Node) ([]Node, error) {
+	switch n.Type() {
+	case TypeArray:
+		return []Node{n.Array()}, nil
+	case TypeMap:
+		m := n.Map()
+		keys := m.Keys()
+		values := make(Array, len(keys))
+		for i, key := range keys {
+			values[i] = m[key]
+		}
+		return []Node{values}, nil
+	}
+	return nil, nil
+}
+
+func (q ValuesQuery) String() string {
+	return "values()"
+}
+
 // FilterQuery consists of multiple queries that filter the nodes in order.
 type FilterQuery []Query
 
@@ -529,8 +593,6 @@ var (
 	_ Selector = (*SelectQuery)(nil)
 )
 
-var tokenRegexp = regexp.MustCompile(`"([^"]*)"|(and|or|==|<=|>=|!=|~=|\.\.|[\.\[\]\(\)\|<>:])|(\w+)`)
-
 // ParseQuery parses the provided expr to a Query.
 // See https://github.com/jarxorg/tree#Query
 func ParseQuery(expr string) (Query, error) {
@@ -576,15 +638,20 @@ func (t *token) indexOfCmd(cmd string) int {
 	return -1
 }
 
+var tokenRegexp = regexp.MustCompile(`"([^"]*)"|(and|or|==|<=|>=|!=|~=|\.\.|[\.\[\]\(\)\|<>:]|[a-z]+\(\))|(\w+)`)
+
 func tokenizeQuery(expr string) (*token, error) {
 	current := &token{}
 	ms := tokenRegexp.FindAllStringSubmatch(expr, -1)
 	for _, m := range ms {
-		if m[1] != "" || m[3] != "" {
-			value := m[1]
-			quoted := value != ""
-			if !quoted {
-				value = m[3]
+		quoted := m[1]
+		cmd := m[2]
+		word := m[3]
+		// NOTE: detect node name
+		if quoted != "" || word != "" {
+			value := quoted
+			if value == "" {
+				value = word
 			}
 			var lastChild *token
 			if len(current.children) > 0 {
@@ -592,17 +659,18 @@ func tokenizeQuery(expr string) (*token, error) {
 			}
 			if lastChild != nil && (lastChild.cmd == "." || lastChild.cmd == "..") {
 				lastChild.value = value
-				lastChild.quoted = quoted
+				lastChild.quoted = quoted != ""
 				continue
 			}
-			t := &token{value: value, quoted: quoted}
+			t := &token{value: value, quoted: quoted != ""}
 			current.children = append(current.children, t)
 			continue
 		}
-		t := &token{cmd: m[2], parent: current}
-		switch m[2] {
+		// NOTE: detect keywords
+		t := &token{cmd: cmd, parent: current}
+		switch cmd {
 		case "]", ")":
-			if (m[2] == "]" && current.cmd != "[") || (m[2] == ")" && current.cmd != "(") {
+			if (cmd == "]" && current.cmd != "[") || (cmd == ")" && current.cmd != "(") {
 				return nil, fmt.Errorf("syntax error: no left bracket: %q", expr)
 			}
 			current = current.parent
@@ -621,7 +689,6 @@ func tokenizeQuery(expr string) (*token, error) {
 
 func tokenToQuery(t *token, expr string) (Query, error) {
 	child := len(t.children)
-
 	switch t.cmd {
 	case "":
 		if child == 0 {
@@ -639,6 +706,12 @@ func tokenToQuery(t *token, expr string) (Query, error) {
 			return WalkQuery(t.value), nil
 		}
 		return NopQuery{}, nil
+	case "count()":
+		return CountQuery{}, nil
+	case "keys()":
+		return KeysQuery{}, nil
+	case "values()":
+		return ValuesQuery{}, nil
 	case "[":
 		if child == 0 {
 			return SelectQuery{}, nil

@@ -49,6 +49,33 @@ func UnmarshalJSON(data []byte) (Node, error) {
 }
 
 // UnmarshalJSON is an implementation of json.Unmarshaler.
+func (n *Any) UnmarshalJSON(data []byte) error {
+	dec := json.NewDecoder(bytes.NewReader(data))
+	t, err := dec.Token()
+	if err != nil {
+		return err
+	}
+	d, ok := t.(json.Delim)
+	if ok {
+		switch d.String() {
+		case "{":
+			m := Map{}
+			n.Node = m
+			return jsonMap(dec, &m)
+		case "[":
+			a, err := jsonArray(dec, Array{})
+			if err != nil {
+				return err
+			}
+			n.Node = a
+			return nil
+		}
+	}
+	n.Node = jsonValue(t)
+	return nil
+}
+
+// UnmarshalJSON is an implementation of json.Unmarshaler.
 func (n *Map) UnmarshalJSON(data []byte) error {
 	dec := json.NewDecoder(bytes.NewReader(data))
 	t, err := dec.Token()

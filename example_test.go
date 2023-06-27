@@ -57,9 +57,28 @@ func ExampleUnmarshalJSON() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	fmt.Printf("%+v\n", animals)
+	fmt.Printf("%v\n", animals)
 
 	// Output:
+	// [map[Name:Platypus Order:Monotremata] map[Name:Quoll Order:Dasyuromorphia]]
+}
+
+func ExampleUnmarshalJSON_any() {
+	data := []byte(`[
+  {"Name": "Platypus", "Order": "Monotremata"},
+  {"Name": "Quoll",    "Order": "Dasyuromorphia"}
+]`)
+
+	var animals tree.Any
+	err := json.Unmarshal(data, &animals)
+	if err != nil {
+		log.Fatal(err)
+	}
+	fmt.Printf("%v\n", animals.Type().IsArray())
+	fmt.Printf("%v\n", animals.Array())
+
+	// Output:
+	// true
 	// [map[Name:Platypus Order:Monotremata] map[Name:Quoll Order:Dasyuromorphia]]
 }
 

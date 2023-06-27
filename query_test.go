@@ -86,7 +86,7 @@ func Test_Query(t *testing.T) {
 				Map{"key1": ToValue(2), "key2": ToValue("b")},
 				Map{"key1": ToValue(3), "key2": ToValue("c")},
 			},
-			want: Array{
+			want: []Node{
 				Map{"key1": ToValue(1), "key2": ToValue("a")},
 			},
 		}, {
@@ -96,7 +96,19 @@ func Test_Query(t *testing.T) {
 				Map{"key1": ToValue(2), "key2": ToValue("b")},
 				Map{"key1": ToValue(3), "key2": ToValue("c")},
 			},
-			want: Array{ToValue(1), ToValue(2), ToValue(3)},
+			want: []Node{ToValue(1), ToValue(2), ToValue(3)},
+		}, {
+			q:    CountQuery{},
+			n:    Map{"key1": ToValue(1), "key2": ToValue("a")},
+			want: []Node{ToValue(2)},
+		}, {
+			q:    KeysQuery{},
+			n:    Map{"key1": ToValue(1), "key2": ToValue("a")},
+			want: []Node{ToArrayValues("key1", "key2")},
+		}, {
+			q:    KeysQuery{},
+			n:    ToArrayValues(1, 2, 3),
+			want: []Node{ToArrayValues(0, 1, 2)},
 		},
 	}
 	for i, test := range tests {
@@ -441,6 +453,26 @@ func Test_Find(t *testing.T) {
 		}, {
 			expr: `.store.book[.author ~= "^(Evelyn Waugh|Herman Melville)$"].title`,
 			want: ToNodeValues("Sword of Honour", "Moby Dick"),
+		}, {
+			expr: `.store.book.count()`,
+			want: []Node{NumberValue(4)},
+		}, {
+			expr: `.store.book[].count()`,
+			want: []Node{NumberValue(5), NumberValue(4), NumberValue(5), NumberValue(5)},
+		}, {
+			expr: `.store.book[0].keys()`,
+			want: []Node{ToArrayValues("author", "authors", "category", "price", "title")},
+		}, {
+			expr: `.store.book[].keys()`,
+			want: []Node{
+				ToArrayValues("author", "authors", "category", "price", "title"),
+				ToArrayValues("author", "category", "price", "title"),
+				ToArrayValues("author", "category", "isbn", "price", "title"),
+				ToArrayValues("author", "category", "isbn", "price", "title"),
+			},
+		}, {
+			expr: `.store.book[0].values()`,
+			want: []Node{ToArrayValues("Nigel Rees", ToArrayValues("Nigel Rees"), "reference", 8.95, "Sayings of the Century")},
 		},
 	}
 	for i, test := range tests {

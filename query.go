@@ -60,6 +60,9 @@ type ValueQuery struct {
 
 // Exec returns the constant value.
 func (q ValueQuery) Exec(n Node) ([]Node, error) {
+	if q.IsNil() {
+		return nil, nil
+	}
 	return []Node{q.Node}, nil
 }
 
@@ -548,6 +551,9 @@ type token struct {
 
 func (t *token) toValue() Node {
 	if !t.quoted {
+		if t.value == "" {
+			return Nil
+		}
 		if t.value == "true" {
 			return BoolValue(true)
 		}
@@ -751,6 +757,9 @@ func tokensToSelector(ts []*token, expr string) (Selector, error) {
 
 // Find finds a node from n using the Query.
 func Find(n Node, expr string) ([]Node, error) {
+	if n.IsNil() {
+		return nil, nil
+	}
 	q, err := ParseQuery(expr)
 	if err != nil {
 		return nil, err

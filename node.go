@@ -91,6 +91,58 @@ type EditorNode interface {
 	Delete(key interface{}) error
 }
 
+// Any is an interface that defines any node.
+type Any struct {
+	Node
+}
+
+var _ Node = (*Any)(nil)
+
+// IsNil returns true if this node is nil.
+func (n Any) IsNil() bool {
+	return n.Node.IsNil()
+}
+
+// Type returns TypeArray.
+func (n Any) Type() Type {
+	return n.Node.Type()
+}
+
+// Array returns this node as an Array.
+func (n Any) Array() Array {
+	return n.Node.Array()
+}
+
+// Map returns nil.
+func (n Any) Map() Map {
+	return n.Node.Map()
+}
+
+// Value returns nil.
+func (n Any) Value() Value {
+	return n.Node.Value()
+}
+
+// Has checks this node has key.
+func (n Any) Has(keys ...interface{}) bool {
+	return n.Node.Has(keys...)
+}
+
+// Get returns an array value as Node.
+func (n Any) Get(keys ...interface{}) Node {
+	return n.Node.Get(keys...)
+}
+
+// Each calls the callback function for each Array values.
+func (n Any) Each(cb func(key interface{}, n Node) error) error {
+	return n.Node.Each(cb)
+}
+
+// Find finds a node using the query expression.
+func (n Any) Find(expr string) ([]Node, error) {
+	return n.Node.Find(expr)
+}
+
 // Array represents an array of Node.
 type Array []Node
 

@@ -63,64 +63,86 @@ func Test_Type(t *testing.T) {
 
 func Test_Node(t *testing.T) {
 	tests := []struct {
-		n     Node
-		isNil bool
-		t     Type
-		a     Array
-		m     Map
-		v     Value
+		n         Node
+		isNil     bool
+		t         Type
+		a         Array
+		m         Map
+		v         Value
+		hasKeys   []interface{}
+		hasValue  bool
+		getKeys   []interface{}
+		getValue  Node
+		findExpr  string
+		findValue []Node
 	}{
 		{
-			n:     Map(nil),
-			isNil: true,
-			t:     TypeMap,
-			m:     Map(nil),
-			a:     Array(nil),
-			v:     Nil,
+			n:        Map(nil),
+			isNil:    true,
+			t:        TypeMap,
+			m:        Map(nil),
+			a:        Array(nil),
+			v:        Nil,
+			getValue: Nil,
 		}, {
-			n: Map{},
-			t: TypeMap,
-			m: Map{},
-			a: Array(nil),
-			v: Nil,
+			n:        Map{},
+			t:        TypeMap,
+			m:        Map{},
+			a:        Array(nil),
+			v:        Nil,
+			getValue: Nil,
 		}, {
-			n:     Array(nil),
-			isNil: true,
-			t:     TypeArray,
-			m:     Map(nil),
-			a:     Array(nil),
-			v:     Nil,
+			n:        Array(nil),
+			isNil:    true,
+			t:        TypeArray,
+			m:        Map(nil),
+			a:        Array(nil),
+			v:        Nil,
+			getValue: Nil,
 		}, {
-			n: Array{},
-			t: TypeArray,
-			m: Map(nil),
-			a: Array{},
-			v: Nil,
+			n:        Array{},
+			t:        TypeArray,
+			m:        Map(nil),
+			a:        Array{},
+			v:        Nil,
+			getValue: Nil,
 		}, {
-			n:     Nil,
-			isNil: true,
-			t:     TypeNilValue,
-			m:     Map(nil),
-			a:     Array(nil),
-			v:     Nil,
+			n:        Nil,
+			isNil:    true,
+			t:        TypeNilValue,
+			m:        Map(nil),
+			a:        Array(nil),
+			v:        Nil,
+			getValue: Nil,
 		}, {
-			n: StringValue("a"),
-			t: TypeStringValue,
-			m: Map(nil),
-			a: Array(nil),
-			v: StringValue("a"),
+			n:        StringValue("a"),
+			t:        TypeStringValue,
+			m:        Map(nil),
+			a:        Array(nil),
+			v:        StringValue("a"),
+			getValue: Nil,
 		}, {
-			n: BoolValue(true),
-			t: TypeBoolValue,
-			m: Map(nil),
-			a: Array(nil),
-			v: BoolValue(true),
+			n:        BoolValue(true),
+			t:        TypeBoolValue,
+			m:        Map(nil),
+			a:        Array(nil),
+			v:        BoolValue(true),
+			getValue: Nil,
 		}, {
-			n: NumberValue(1),
-			t: TypeNumberValue,
-			m: Map(nil),
-			a: Array(nil),
-			v: NumberValue(1),
+			n:        NumberValue(1),
+			t:        TypeNumberValue,
+			m:        Map(nil),
+			a:        Array(nil),
+			v:        NumberValue(1),
+			getValue: Nil,
+		}, {
+			n:        Any{Map(nil)},
+			isNil:    true,
+			t:        TypeMap,
+			m:        Map(nil),
+			a:        Array(nil),
+			v:        Nil,
+			getValue: Nil,
 		},
 	}
 	for i, test := range tests {
@@ -139,6 +161,19 @@ func Test_Node(t *testing.T) {
 		}
 		if vv := n.Value(); !reflect.DeepEqual(vv, test.v) {
 			t.Errorf("tests[%d] Value got %v; want %v", i, vv, test.v)
+		}
+		if had := n.Has(test.hasKeys...); had != test.hasValue {
+			t.Errorf("tests[%d] Has got %v; want %v", i, had, test.hasValue)
+		}
+		if got := n.Get(test.getKeys...); !reflect.DeepEqual(got, test.getValue) {
+			t.Errorf("tests[%d] Get got %v; want %v", i, got, test.getValue)
+		}
+		found, err := n.Find(test.findExpr)
+		if err != nil {
+			t.Errorf("tests[%d] failed to Find error %v", i, err)
+		}
+		if !reflect.DeepEqual(found, test.findValue) {
+			t.Errorf("tests[%d] Find got %v; want %v", i, found, test.findValue)
 		}
 	}
 }
@@ -265,6 +300,9 @@ func Test_Node_Each(t *testing.T) {
 		}, {
 			n:    NumberValue(1),
 			want: map[interface{}]Node{nil: NumberValue(1)},
+		}, {
+			n:    Any{Map{"a": NumberValue(0), "b": NumberValue(1)}},
+			want: map[interface{}]Node{"a": NumberValue(0), "b": NumberValue(1)},
 		},
 	}
 	for i, test := range tests {

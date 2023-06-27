@@ -47,6 +47,7 @@ func TestEncodeJSON(t *testing.T) {
 					ToValue(true),
 				},
 				"c": Nil,
+				"d": nil,
 			},
 			want: `{
     "a": 1,
@@ -54,7 +55,8 @@ func TestEncodeJSON(t *testing.T) {
         "2",
         true
     ],
-    "c": null
+    "c": null,
+    "d": null
 }
 `,
 		}, {
@@ -118,12 +120,14 @@ func TestEncodeYAML(t *testing.T) {
 					ToValue(true),
 				},
 				"c": Nil,
+				"d": nil,
 			},
 			want: `a: 1
 b:
   - "2"
   - true
 c: null
+d: null
 `,
 		}, {
 			e: &ColorEncoder{IndentSize: 2, NoColor: true},

@@ -188,3 +188,41 @@ func regexpMatchString(expr, value string) (bool, error) {
 	}
 	return re.MatchString(value), nil
 }
+
+// Clone clones the node.
+func Clone(n Node) Node {
+	return clone(n, false)
+}
+
+// CloneDeep clones the node.
+func CloneDeep(n Node) Node {
+	return clone(n, true)
+}
+
+func clone(n Node, deep bool) Node {
+	switch n.Type() {
+	case TypeArray:
+		a := n.Array()
+		aa := make(Array, len(a))
+		for i := 0; i < len(a); i++ {
+			if deep {
+				aa[i] = Clone(a[i])
+			} else {
+				aa[i] = a[i]
+			}
+		}
+		return aa
+	case TypeMap:
+		m := n.Map()
+		mm := make(Map, len(m))
+		for k, v := range m {
+			if deep {
+				mm[k] = Clone(v)
+			} else {
+				mm[k] = v
+			}
+		}
+		return mm
+	}
+	return n
+}

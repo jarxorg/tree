@@ -299,9 +299,8 @@ func TestMerge(t *testing.T) {
 		},
 	}
 	for i, test := range tests {
-		a := Clone(test.a)
-		b := Clone(test.b)
-		got := Merge(a, b, test.opts)
+		a, b := CloneDeep(test.a), CloneDeep(test.b)
+		got := Merge(CloneDeep(test.a), CloneDeep(test.b), test.opts)
 		if !reflect.DeepEqual(got, test.want) {
 			t.Errorf(`tests[%d]: unexpected %v; want %v`, i, got, test.want)
 		}

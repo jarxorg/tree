@@ -89,11 +89,9 @@ func (o MergeOption) isSlurp() bool {
 }
 
 // Merge merges two nodes with MergeOption.
+// If you do not want to change the state of the node given as an argument, use CloneDeep.
+// ex: merged := Merge(CloneDeep(a), CloneDeep(b), opts)
 func Merge(a, b Node, opts MergeOption) Node {
-	return merge(CloneDeep(a), b, opts)
-}
-
-func merge(a Node, b Node, opts MergeOption) Node {
 	if a.Type().IsMap() {
 		if b.Type().IsMap() {
 			return mergeMap(a.Map(), b.Map(), opts)
@@ -131,7 +129,7 @@ func mergeArray(a, b Array, opts MergeOption) Array {
 	if opts.isOverrideArray() {
 		for i, v := range b {
 			if i < len(a) {
-				a.Set(i, merge(a[i], v, opts))
+				a.Set(i, Merge(a[i], v, opts))
 			} else {
 				a = append(a, v)
 			}
@@ -151,7 +149,7 @@ func mergeMap(a, b Map, opts MergeOption) Map {
 	if opts.isSlurp() || opts.isOverrideMap() {
 		for k, v := range b {
 			if vv, exists := a[k]; exists {
-				a[k] = merge(vv, v, opts)
+				a[k] = Merge(vv, v, opts)
 			} else {
 				a[k] = v
 			}

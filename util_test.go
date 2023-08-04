@@ -198,3 +198,54 @@ func Test_regexpMatchString(t *testing.T) {
 		}
 	}
 }
+
+func TestClone(t *testing.T) {
+	tests := []struct {
+		n    Node
+		want Node
+	}{
+		{
+			n:    ToValue(1),
+			want: ToValue(1),
+		}, {
+			n:    Map{"a": ToValue(1), "b": ToValue(2)},
+			want: Map{"a": ToValue(1), "b": ToValue(2)},
+		},
+	}
+	for i, test := range tests {
+		got := Clone(test.n)
+		if !reflect.DeepEqual(got, test.want) {
+			t.Errorf(`tests[%d]: unexpected %v; want %v`, i, got, test.want)
+		}
+	}
+}
+
+func TestCloneDeep(t *testing.T) {
+	tests := []struct {
+		n      Node
+		want   Node
+		update func(n Node)
+	}{
+		{
+			n:      ToValue(1),
+			want:   ToValue(1),
+			update: func(n Node) {},
+		}, {
+			n:    Map{"a": ToArrayValues(1, 2), "b": ToArrayValues(3, 4)},
+			want: Map{"a": ToArrayValues(1, 2), "b": ToArrayValues(3, 4)},
+			update: func(n Node) {
+				n.Map().Get("a").Array()[0] = ToValue(5)
+			},
+		},
+	}
+	for i, test := range tests {
+		got := CloneDeep(test.n)
+		if !reflect.DeepEqual(got, test.want) {
+			t.Errorf(`tests[%d]: unexpected %v; want %v`, i, got, test.want)
+		}
+		test.update(test.n)
+		if !reflect.DeepEqual(got, test.want) {
+			t.Errorf(`tests[%d]: unexpected %v; want %v`, i, got, test.want)
+		}
+	}
+}

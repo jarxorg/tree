@@ -145,7 +145,7 @@ Name: Reds
 	// map[Colors:[Crimson Red Ruby Maroon] ID:1 Name:Reds]
 }
 
-func ExampleGet() {
+func ExampleNode_Get() {
 	group := tree.Map{
 		"ID":     tree.ToValue(1),
 		"Name":   tree.ToValue("Reds"),

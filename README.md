@@ -192,13 +192,14 @@ func ExampleFind() {
 
 | Query | Description | Results |
 | - | - | - |
-| .store.book[0] | The first book | {"category": "reference", "author": "Nigel Rees", "title": "Sayings of the Century", "price": 8.95} |
+| .store.book[0] | The first book | {"category": "reference", "author": "Nigel Rees", "title": "Sayings of the Century", "price": 8.95, "tags": [...]} |
 | .store.book[0].price | The price of the first book | 8.95 |
 | .store.book.0.price | The price of the first book (using dot) | 8.95 |
 | .store.book[:2].price | All prices of books[0:2] (index 2 is exclusive) | 8.95, 12.99 |
 | .store.book[].author | All authors of all books | "Nigel Rees", "Evelyn Waugh", "Herman Melville", "J. R. R. Tolkien" |
 | ..author | All authors |  "Nigel Rees", "Evelyn Waugh", "Herman Melville", "J. R. R. Tolkien" |
 | ..author \| [0] | The first author | "Nigel Rees" |
+| .store.book[.tags[.name == "genre" and .value == "fiction"]].title | All titles of books tagged "fiction" | "Sword of Honour", "Moby Dick" |
 | .store.book[(.category == "fiction" or .category == "reference") and .price < 10].title | All titles of books these are categoried into "fiction", "reference" and price < 10 | "Sayings of the Century", "Moby Dick" |
 | .store.book[.title ~= "^S"].title | Titles beginning with "S" | "Sayings of the Century", "Sword of Honour" |
 | .store.book.count() | Count books | 4 |
@@ -210,37 +211,58 @@ func ExampleFind() {
 ```json
 {
   "store": {
-    "book": [{
-        "category": "reference",
-        "author": "Nigel Rees",
-        "title": "Sayings of the Century",
-        "price": 8.95
-      },
-      {
-        "category": "fiction",
-        "author": "Evelyn Waugh",
-        "title": "Sword of Honour",
-        "price": 12.99
-      },
-      {
-        "category": "fiction",
-        "author": "Herman Melville",
-        "title": "Moby Dick",
-        "isbn": "0-553-21311-3",
-        "price": 8.99
-      },
-      {
-        "category": "fiction",
-        "author": "J. R. R. Tolkien",
-        "title": "The Lord of the Rings",
-        "isbn": "0-395-19395-8",
-        "price": 22.99
-      }
-    ],
     "bicycle": {
       "color": "red",
       "price": 19.95
-    }
+    },
+    "book": [
+      {
+        "author": "Nigel Rees",
+        "category": "reference",
+        "price": 8.95,
+        "title": "Sayings of the Century",
+        "tags": [
+          { "name": "genre", "value": "reference" },
+          { "name": "era", "value": "20th century" },
+          { "name": "theme", "value": "quotations" }
+        ]
+      },
+      {
+        "author": "Evelyn Waugh",
+        "category": "fiction",
+        "price": 12.99,
+        "title": "Sword of Honour",
+        "tags": [
+          { "name": "genre", "value": "fiction" },
+          { "name": "era", "value": "20th century" },
+          { "name": "theme", "value": "WWII" }
+        ]
+      },
+      {
+        "author": "Herman Melville",
+        "category": "fiction",
+        "isbn": "0-553-21311-3",
+        "price": 8.99,
+        "title": "Moby Dick",
+        "tags": [
+          { "name": "genre", "value": "fiction" },
+          { "name": "era", "value": "19th century" },
+          { "name": "theme", "value": "whale hunting" }
+        ]
+      },
+      {
+        "author": "J. R. R. Tolkien",
+        "category": "fiction",
+        "isbn": "0-395-19395-8",
+        "price": 22.99,
+        "title": "The Lord of the Rings",
+        "tags": [
+          { "name": "genre", "value": "fantasy" },
+          { "name": "era", "value": "20th century" },
+          { "name": "theme", "value": "good vs evil" }
+        ]
+      }
+    ]
   }
 }
 ```

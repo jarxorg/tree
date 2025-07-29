@@ -1,8 +1,10 @@
+version: 2
 before:
   hooks:
     - go mod tidy
 builds:
-  - main: ./cmd/tq
+  - id: tq
+    main: ./cmd/tq
     binary: tq
     env:
       - CGO_ENABLED=0
@@ -12,22 +14,24 @@ builds:
       - darwin
 checksum:
   name_template: 'checksums.txt'
-snapshot:
-  name_template: "{{ incpatch .Version }}-next"
 changelog:
   sort: asc
   filters:
     exclude:
       - '^docs:'
       - '^test:'
-brews:
-- name: tq
-  tap:
-    owner: jarxorg
-    name: homebrew-tree
-    token: "{{ .Env.HOMEBREW_TAP_GITHUB_TOKEN }}"
-  folder: Formula
-  homepage: https://github.com/jarxorg/tree#tq
-  description: tq is a portable command-line JSON/YAML processor.
-  test: |
-    system "#{bin}/tq --help"
+archives:
+  - id: tq
+    ids: [ 'tq' ]
+    format_overrides:
+      - goos: windows
+        formats: [ 'zip' ]
+homebrew_casks:
+  - name: tq
+    ids: [ 'tq' ]
+    homepage: https://github.com/jarxorg/tree#tq
+    description: tq is a portable command-line JSON/YAML processor.
+    repository:
+      owner: jarxorg
+      name: homebrew-tree
+      token: "{{ .Env.TREE_HOMEBREW_TAP_GITHUB_TOKEN }}"

@@ -497,12 +497,52 @@ func (o Or) String() string {
 	return "(" + strings.Join(ss, " or ") + ")"
 }
 
+// Evaluator represents a evaluatable selector.
+type Evaluator struct {
+	Query Query
+}
+
+var _ Selector = (*Evaluator)(nil)
+
+func (e Evaluator) Matches(n Node) (bool, error) {
+	rs, err := e.Query.Exec(n)
+	if err != nil {
+		return false, err
+	}
+	switch len(rs) {
+	case 0:
+		return false, nil
+	case 1:
+		r := rs[0]
+		switch r.Type() {
+		case TypeBoolValue:
+			return r.Value().Bool(), nil
+		case TypeNumberValue:
+			return r.Value().Float64() > 0, nil
+		case TypeStringValue:
+			return r.Value().String() != "", nil
+		case TypeArray:
+			return len(r.Array()) > 0, nil
+		case TypeMap:
+			return len(r.Map()) > 0, nil
+		}
+		return false, nil
+	}
+	return true, nil
+}
+
+func (e Evaluator) String() string {
+	return e.Query.String()
+}
+
 // Comparator represents a comparable selector.
 type Comparator struct {
 	Left  Query
 	Op    Operator
 	Right Query
 }
+
+var _ Selector = (*Comparator)(nil)
 
 // Matches evaluates left and right using the operator. (eg. .id == 0)
 func (c Comparator) Matches(n Node) (bool, error) {
@@ -583,6 +623,9 @@ func (q SelectQuery) Exec(n Node) ([]Node, error) {
 }
 
 func (q SelectQuery) String() string {
+	if q.Selector == nil {
+		return "[]"
+	}
 	return "[" + q.Selector.String() + "]"
 }
 
@@ -810,6 +853,13 @@ func tokensToSelector(ts []*token, expr string) (Selector, error) {
 			}
 		}
 		if op == -1 {
+			if len(groups) == 1 && len(group) > 0 {
+				q, err := tokenToQuery(&token{children: group}, expr)
+				if err != nil {
+					return nil, err
+				}
+				ss = append(ss, Evaluator{Query: q})
+			}
 			continue
 		}
 		left, err := tokenToQuery(&token{children: group[0:op]}, expr)

@@ -330,27 +330,47 @@ var testStoreJSON = `{
         "author": "Nigel Rees",
         "authors": ["Nigel Rees"],
         "title": "Sayings of the Century",
-        "price": 8.95
+        "price": 8.95,
+        "tags": [
+          { "name": "genre", "value": "reference" },
+          { "name": "era", "value": "20th century" },
+          { "name": "theme", "value": "quotations" }
+        ]
       },
       {
         "category": "fiction",
         "author": "Evelyn Waugh",
         "title": "Sword of Honour",
-        "price": 12.99
+        "price": 12.99,
+        "tags": [
+          { "name": "genre", "value": "fiction" },
+          { "name": "era", "value": "20th century" },
+          { "name": "theme", "value": "WWII" }
+        ]
       },
       {
         "category": "fiction",
         "author": "Herman Melville",
         "title": "Moby Dick",
         "isbn": "0-553-21311-3",
-        "price": 8.99
+        "price": 8.99,
+        "tags": [
+          { "name": "genre", "value": "fiction" },
+          { "name": "era", "value": "19th century" },
+          { "name": "theme", "value": "whale hunting" }
+        ]
       },
       {
         "category": "fiction",
         "author": "J. R. R. Tolkien",
         "title": "The Lord of the Rings",
         "isbn": "0-395-19395-8",
-        "price": 22.99
+        "price": 22.99,
+        "tags": [
+          { "name": "genre", "value": "fantasy" },
+          { "name": "era", "value": "20th century" },
+          { "name": "theme", "value": "good vs evil" }
+        ]
       }
     ],
     "bicycle": {
@@ -361,12 +381,12 @@ var testStoreJSON = `{
 }
 `
 
-func Test_Find(t *testing.T) {
+func TestFind(t *testing.T) {
 	n, err := UnmarshalJSON([]byte(testStoreJSON))
 	if err != nil {
 		t.Fatal(err)
 	}
-	tests := []struct {
+	testCases := []struct {
 		expr string
 		want []Node
 	}{
@@ -376,23 +396,23 @@ func Test_Find(t *testing.T) {
 		}, {
 			expr: `.store[]`,
 			want: []Node{
-				n.Get("store").Get("bicycle"),
-				n.Get("store").Get("book"),
+				n.Get("store", "bicycle"),
+				n.Get("store", "book"),
 			},
 		}, {
 			expr: `.store.book[0]`,
-			want: []Node{n.Get("store").Get("book").Get(0)},
+			want: []Node{n.Get("store", "book", 0)},
 		}, {
 			expr: `.store.book[]`,
 			want: []Node{
-				n.Get("store").Get("book").Get(0),
-				n.Get("store").Get("book").Get(1),
-				n.Get("store").Get("book").Get(2),
-				n.Get("store").Get("book").Get(3),
+				n.Get("store", "book", 0),
+				n.Get("store", "book", 1),
+				n.Get("store", "book", 2),
+				n.Get("store", "book", 3),
 			},
 		}, {
 			expr: `..book[0]`,
-			want: []Node{n.Get("store").Get("book").Get(0)},
+			want: []Node{n.Get("store", "book", 0)},
 		}, {
 			expr: `..book[0:2].title`,
 			want: []Node{StringValue("Sayings of the Century"), StringValue("Sword of Honour")},
@@ -401,15 +421,15 @@ func Test_Find(t *testing.T) {
 			want: []Node{StringValue("Sayings of the Century")},
 		}, {
 			expr: `.store.book.0`,
-			want: []Node{n.Get("store").Get("book").Get(0)},
+			want: []Node{n.Get("store", "book", 0)},
 		}, {
 			expr: `.store.book[0].price`,
-			want: []Node{n.Get("store").Get("book").Get(0).Get("price")},
+			want: []Node{n.Get("store", "book", 0, "price")},
 		}, {
 			expr: `.store.book[0:2]`,
 			want: []Node{
-				n.Get("store").Get("book").Get(0),
-				n.Get("store").Get("book").Get(1),
+				n.Get("store", "book", 0),
+				n.Get("store", "book", 1),
 			},
 		}, {
 			expr: `.store.book[1:].price`,
@@ -420,6 +440,12 @@ func Test_Find(t *testing.T) {
 		}, {
 			expr: `.store.book[].author`,
 			want: ToNodeValues("Nigel Rees", "Evelyn Waugh", "Herman Melville", "J. R. R. Tolkien"),
+		}, {
+			expr: `.store.book[.tags[.name == "genre" and .value == "fiction"].count() > 0].title`,
+			want: ToNodeValues("Sword of Honour", "Moby Dick"),
+		}, {
+			expr: `.store.book[.tags[.name == "genre" and .value == "fiction"]].title`,
+			want: ToNodeValues("Sword of Honour", "Moby Dick"),
 		}, {
 			expr: `.store.book[.category == "fiction"].title`,
 			want: ToNodeValues("Sword of Honour", "Moby Dick", "The Lord of the Rings"),
@@ -446,7 +472,14 @@ func Test_Find(t *testing.T) {
 			want: ToNodeValues("Sword of Honour", "Moby Dick", "The Lord of the Rings"),
 		}, {
 			expr: `..0`,
-			want: []Node{n.Get("store").Get("book").Get(0), StringValue("Nigel Rees")},
+			want: []Node{
+				n.Get("store", "book", 0),
+				n.Get("store", "book", 0, "authors", 0),
+				n.Get("store", "book", 0, "tags", 0),
+				n.Get("store", "book", 1, "tags", 0),
+				n.Get("store", "book", 2, "tags", 0),
+				n.Get("store", "book", 3, "tags", 0),
+			},
 		}, {
 			expr: `.store.book[.title ~= "^S"].title`,
 			want: ToNodeValues("Sayings of the Century", "Sword of Honour"),
@@ -458,31 +491,42 @@ func Test_Find(t *testing.T) {
 			want: []Node{NumberValue(4)},
 		}, {
 			expr: `.store.book[].count()`,
-			want: []Node{NumberValue(5), NumberValue(4), NumberValue(5), NumberValue(5)},
+			want: []Node{NumberValue(6), NumberValue(5), NumberValue(6), NumberValue(6)},
 		}, {
 			expr: `.store.book[0].keys()`,
-			want: []Node{ToArrayValues("author", "authors", "category", "price", "title")},
+			want: []Node{ToArrayValues("author", "authors", "category", "price", "tags", "title")},
 		}, {
 			expr: `.store.book[].keys()`,
 			want: []Node{
-				ToArrayValues("author", "authors", "category", "price", "title"),
-				ToArrayValues("author", "category", "price", "title"),
-				ToArrayValues("author", "category", "isbn", "price", "title"),
-				ToArrayValues("author", "category", "isbn", "price", "title"),
+				ToArrayValues("author", "authors", "category", "price", "tags", "title"),
+				ToArrayValues("author", "category", "price", "tags", "title"),
+				ToArrayValues("author", "category", "isbn", "price", "tags", "title"),
+				ToArrayValues("author", "category", "isbn", "price", "tags", "title"),
 			},
 		}, {
 			expr: `.store.book[0].values()`,
-			want: []Node{ToArrayValues("Nigel Rees", ToArrayValues("Nigel Rees"), "reference", 8.95, "Sayings of the Century")},
+			want: []Node{
+				ToArrayValues(
+					"Nigel Rees",
+					ToArrayValues("Nigel Rees"),
+					"reference",
+					8.95,
+					n.Get("store", "book", 0, "tags"),
+					"Sayings of the Century",
+				),
+			},
 		},
 	}
-	for i, test := range tests {
-		got, err := Find(n, test.expr)
-		if err != nil {
-			t.Fatalf("tests[%d] %+v", i, err)
-		}
-		if !reflect.DeepEqual(got, test.want) {
-			t.Errorf("tests[%d] got %#v; want %#v", i, got, test.want)
-		}
+	for _, tc := range testCases {
+		t.Run("", func(t *testing.T) {
+			got, err := Find(n, tc.expr)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if !reflect.DeepEqual(got, tc.want) {
+				t.Errorf("got %#v; want %#v", got, tc.want)
+			}
+		})
 	}
 }
 

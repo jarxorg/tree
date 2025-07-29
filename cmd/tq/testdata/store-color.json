@@ -9,12 +9,40 @@
         [1;34m"author"[0m: [0;32m"Nigel Rees"[0m,
         [1;34m"category"[0m: [0;32m"reference"[0m,
         [1;34m"price"[0m: 8.95,
+        [1;34m"tags"[0m: [
+          {
+            [1;34m"name"[0m: [0;32m"genre"[0m,
+            [1;34m"value"[0m: [0;32m"reference"[0m
+          },
+          {
+            [1;34m"name"[0m: [0;32m"era"[0m,
+            [1;34m"value"[0m: [0;32m"20th century"[0m
+          },
+          {
+            [1;34m"name"[0m: [0;32m"theme"[0m,
+            [1;34m"value"[0m: [0;32m"quotations"[0m
+          }
+        ],
         [1;34m"title"[0m: [0;32m"Sayings of the Century"[0m
       },
       {
         [1;34m"author"[0m: [0;32m"Evelyn Waugh"[0m,
         [1;34m"category"[0m: [0;32m"fiction"[0m,
         [1;34m"price"[0m: 12.99,
+        [1;34m"tags"[0m: [
+          {
+            [1;34m"name"[0m: [0;32m"genre"[0m,
+            [1;34m"value"[0m: [0;32m"fiction"[0m
+          },
+          {
+            [1;34m"name"[0m: [0;32m"era"[0m,
+            [1;34m"value"[0m: [0;32m"20th century"[0m
+          },
+          {
+            [1;34m"name"[0m: [0;32m"theme"[0m,
+            [1;34m"value"[0m: [0;32m"WWII"[0m
+          }
+        ],
         [1;34m"title"[0m: [0;32m"Sword of Honour"[0m
       },
       {
@@ -22,6 +50,20 @@
         [1;34m"category"[0m: [0;32m"fiction"[0m,
         [1;34m"isbn"[0m: [0;32m"0-553-21311-3"[0m,
         [1;34m"price"[0m: 8.99,
+        [1;34m"tags"[0m: [
+          {
+            [1;34m"name"[0m: [0;32m"genre"[0m,
+            [1;34m"value"[0m: [0;32m"fiction"[0m
+          },
+          {
+            [1;34m"name"[0m: [0;32m"era"[0m,
+            [1;34m"value"[0m: [0;32m"19th century"[0m
+          },
+          {
+            [1;34m"name"[0m: [0;32m"theme"[0m,
+            [1;34m"value"[0m: [0;32m"whale hunting"[0m
+          }
+        ],
         [1;34m"title"[0m: [0;32m"Moby Dick"[0m
       },
       {
@@ -29,6 +71,20 @@
         [1;34m"category"[0m: [0;32m"fiction"[0m,
         [1;34m"isbn"[0m: [0;32m"0-395-19395-8"[0m,
         [1;34m"price"[0m: 22.99,
+        [1;34m"tags"[0m: [
+          {
+            [1;34m"name"[0m: [0;32m"genre"[0m,
+            [1;34m"value"[0m: [0;32m"fantasy"[0m
+          },
+          {
+            [1;34m"name"[0m: [0;32m"era"[0m,
+            [1;34m"value"[0m: [0;32m"20th century"[0m
+          },
+          {
+            [1;34m"name"[0m: [0;32m"theme"[0m,
+            [1;34m"value"[0m: [0;32m"good vs evil"[0m
+          }
+        ],
         [1;34m"title"[0m: [0;32m"The Lord of the Rings"[0m
       }
     ]

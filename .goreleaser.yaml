@@ -26,11 +26,12 @@ archives:
     format_overrides:
       - goos: windows
         formats: [ 'zip' ]
-homebrew_casks:
+brews:
   - name: tq
     ids: [ 'tq' ]
     homepage: https://github.com/jarxorg/tree#tq
     description: tq is a portable command-line JSON/YAML processor.
+    directory: Formula
     repository:
       owner: jarxorg
       name: homebrew-tree

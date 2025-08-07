@@ -2,6 +2,7 @@ package tree
 
 import (
 	"fmt"
+	"strconv"
 	"sync"
 )
 
@@ -134,9 +135,197 @@ func (q *ValuesQuery) String() string {
 	return "values()"
 }
 
+// EmptyQuery checks if the node is empty.
+// Returns true for empty arrays, empty maps, null values, and empty strings.
+type EmptyQuery struct{}
+
+// NewEmptyQuery creates a new EmptyQuery instance.
+// Arguments are ignored for this query type.
+func NewEmptyQuery(args ...string) (Query, error) {
+	return &EmptyQuery{}, nil
+}
+
+// Exec returns whether the node is empty.
+// Returns true for empty arrays, empty maps, null values, and empty strings.
+func (q *EmptyQuery) Exec(n Node) ([]Node, error) {
+	switch n.Type() {
+	case TypeArray:
+		return ToNodeValues(len(n.Array()) == 0), nil
+	case TypeMap:
+		return ToNodeValues(len(n.Map()) == 0), nil
+	case TypeStringValue:
+		return ToNodeValues(n.Value().String() == ""), nil
+	case TypeNilValue:
+		return ToNodeValues(true), nil
+	}
+	return ToNodeValues(false), nil
+}
+
+func (q *EmptyQuery) String() string {
+	return "empty()"
+}
+
+// TypeQuery returns the type name of the node.
+// Returns "array", "object", "string", "number", "boolean", or "null".
+type TypeQuery struct{}
+
+// NewTypeQuery creates a new TypeQuery instance.
+// Arguments are ignored for this query type.
+func NewTypeQuery(args ...string) (Query, error) {
+	return &TypeQuery{}, nil
+}
+
+// Exec returns the type name of the node as a string.
+// Returns "array", "object", "string", "number", "boolean", or "null".
+func (q *TypeQuery) Exec(n Node) ([]Node, error) {
+	var typeName string
+	switch n.Type() {
+	case TypeArray:
+		typeName = "array"
+	case TypeMap:
+		typeName = "object"
+	case TypeStringValue:
+		typeName = "string"
+	case TypeNumberValue:
+		typeName = "number"
+	case TypeBoolValue:
+		typeName = "boolean"
+	case TypeNilValue:
+		typeName = "null"
+	default:
+		typeName = "unknown"
+	}
+	return ToNodeValues(typeName), nil
+}
+
+func (q *TypeQuery) String() string {
+	return "type()"
+}
+
+// HasQuery checks if the node has the specified key.
+// Works with both arrays (numeric keys) and maps (string keys).
+type HasQuery struct {
+	Key string
+}
+
+// NewHasQuery creates a new HasQuery instance.
+// Requires exactly one argument specifying the key to check.
+func NewHasQuery(args ...string) (Query, error) {
+	if len(args) != 1 {
+		return nil, fmt.Errorf("has() requires exactly 1 argument, got %d", len(args))
+	}
+	return &HasQuery{Key: args[0]}, nil
+}
+
+// Exec returns whether the node has the specified key.
+// For arrays, checks numeric indices. For maps, checks string keys.
+func (q *HasQuery) Exec(n Node) ([]Node, error) {
+	switch n.Type() {
+	case TypeArray:
+		if idx, err := strconv.Atoi(q.Key); err == nil {
+			return ToNodeValues(n.Has(idx)), nil
+		}
+		return ToNodeValues(false), nil
+	case TypeMap:
+		return ToNodeValues(n.Has(q.Key)), nil
+	}
+	return ToNodeValues(false), nil
+}
+
+func (q *HasQuery) String() string {
+	return fmt.Sprintf("has(%q)", q.Key)
+}
+
+// FirstQuery returns the first element of an array.
+// Returns null for empty arrays or non-array types.
+type FirstQuery struct{}
+
+// NewFirstQuery creates a new FirstQuery instance.
+// Arguments are ignored for this query type.
+func NewFirstQuery(args ...string) (Query, error) {
+	return &FirstQuery{}, nil
+}
+
+// Exec returns the first element of an array.
+// Returns null for empty arrays or non-array types.
+func (q *FirstQuery) Exec(n Node) ([]Node, error) {
+	if a := n.Array(); a != nil {
+		if len(a) > 0 {
+			return []Node{a[0]}, nil
+		}
+	}
+	return []Node{Nil}, nil
+}
+
+func (q *FirstQuery) String() string {
+	return "first()"
+}
+
+// LastQuery returns the last element of an array.
+// Returns null for empty arrays or non-array types.
+type LastQuery struct{}
+
+// NewLastQuery creates a new LastQuery instance.
+// Arguments are ignored for this query type.
+func NewLastQuery(args ...string) (Query, error) {
+	return &LastQuery{}, nil
+}
+
+// Exec returns the last element of an array.
+// Returns null for empty arrays or non-array types.
+func (q *LastQuery) Exec(n Node) ([]Node, error) {
+	if a := n.Array(); a != nil {
+		if len(a) > 0 {
+			return []Node{a[len(a)-1]}, nil
+		}
+	}
+	return []Node{Nil}, nil
+}
+
+func (q *LastQuery) String() string {
+	return "last()"
+}
+
+// FlattenQuery flattens nested arrays into a single array.
+// Only flattens one level deep by default.
+type FlattenQuery struct{}
+
+// NewFlattenQuery creates a new FlattenQuery instance.
+// Arguments are ignored for this query type.
+func NewFlattenQuery(args ...string) (Query, error) {
+	return &FlattenQuery{}, nil
+}
+
+// Exec flattens nested arrays into a single array.
+// Only flattens one level deep. Returns the original node for non-arrays.
+func (q *FlattenQuery) Exec(n Node) ([]Node, error) {
+	if a := n.Array(); a != nil {
+		var flattened Array
+		for _, item := range a {
+			if subArray := item.Array(); subArray != nil {
+				flattened = append(flattened, subArray...)
+			} else {
+				flattened = append(flattened, item)
+			}
+		}
+		return []Node{flattened}, nil
+	}
+	return []Node{n}, nil
+}
+
+func (q *FlattenQuery) String() string {
+	return "flatten()"
+}
+
 // init automatically registers the built-in method queries.
 func init() {
 	RegisterNewMethodQueryFunc("count", NewCountQuery)
 	RegisterNewMethodQueryFunc("keys", NewKeysQuery)
 	RegisterNewMethodQueryFunc("values", NewValuesQuery)
+	RegisterNewMethodQueryFunc("empty", NewEmptyQuery)
+	RegisterNewMethodQueryFunc("type", NewTypeQuery)
+	RegisterNewMethodQueryFunc("has", NewHasQuery)
+	RegisterNewMethodQueryFunc("first", NewFirstQuery)
+	RegisterNewMethodQueryFunc("last", NewLastQuery)
+	RegisterNewMethodQueryFunc("flatten", NewFlattenQuery)
 }

@@ -124,6 +124,51 @@ func Test_MethodQuery(t *testing.T) {
 			n:        ToArrayValues("a", "b"),
 			want:     []Node{BoolValue(false)},
 		}, {
+			caseName: "contains value in array true",
+			q:        &ContainsQuery{Value: "b"},
+			n:        ToArrayValues("a", "b", "c"),
+			want:     []Node{BoolValue(true)},
+		}, {
+			caseName: "contains value in array false",
+			q:        &ContainsQuery{Value: "x"},
+			n:        ToArrayValues("a", "b", "c"),
+			want:     []Node{BoolValue(false)},
+		}, {
+			caseName: "contains value in map true",
+			q:        &ContainsQuery{Value: "test"},
+			n:        Map{"name": StringValue("test"), "age": NumberValue(30)},
+			want:     []Node{BoolValue(true)},
+		}, {
+			caseName: "contains value in map false",
+			q:        &ContainsQuery{Value: "missing"},
+			n:        Map{"name": StringValue("test")},
+			want:     []Node{BoolValue(false)},
+		}, {
+			caseName: "contains substring in string true",
+			q:        &ContainsQuery{Value: "est"},
+			n:        StringValue("testing"),
+			want:     []Node{BoolValue(true)},
+		}, {
+			caseName: "contains substring in string false",
+			q:        &ContainsQuery{Value: "xyz"},
+			n:        StringValue("testing"),
+			want:     []Node{BoolValue(false)},
+		}, {
+			caseName: "contains empty string",
+			q:        &ContainsQuery{Value: ""},
+			n:        StringValue("test"),
+			want:     []Node{BoolValue(true)},
+		}, {
+			caseName: "contains exact string match",
+			q:        &ContainsQuery{Value: "test"},
+			n:        StringValue("test"),
+			want:     []Node{BoolValue(true)},
+		}, {
+			caseName: "contains in non-container type",
+			q:        &ContainsQuery{Value: "test"},
+			n:        NumberValue(42),
+			want:     []Node{BoolValue(false)},
+		}, {
 			caseName: "first element",
 			q:        &FirstQuery{},
 			n:        ToArrayValues("a", "b", "c"),
@@ -179,5 +224,180 @@ func Test_MethodQuery(t *testing.T) {
 				t.Errorf("got %v; want %v", got, tc.want)
 			}
 		})
+	}
+}
+
+func Test_NewMethodQuery(t *testing.T) {
+	testCases := []struct {
+		caseName string
+		method   string
+		args     []string
+		wantType string
+		errstr   string
+	}{
+		{
+			caseName: "count method",
+			method:   "count",
+			args:     []string{},
+			wantType: "*tree.CountQuery",
+		},
+		{
+			caseName: "keys method",
+			method:   "keys",
+			args:     []string{},
+			wantType: "*tree.KeysQuery",
+		},
+		{
+			caseName: "values method",
+			method:   "values",
+			args:     []string{},
+			wantType: "*tree.ValuesQuery",
+		},
+		{
+			caseName: "empty method",
+			method:   "empty",
+			args:     []string{},
+			wantType: "*tree.EmptyQuery",
+		},
+		{
+			caseName: "type method",
+			method:   "type",
+			args:     []string{},
+			wantType: "*tree.TypeQuery",
+		},
+		{
+			caseName: "has method with arg",
+			method:   "has",
+			args:     []string{"key"},
+			wantType: "*tree.HasQuery",
+		},
+		{
+			caseName: "has method no args",
+			method:   "has",
+			args:     []string{},
+			errstr:   "has() requires exactly 1 argument, got 0",
+		},
+		{
+			caseName: "has method too many args",
+			method:   "has",
+			args:     []string{"key1", "key2"},
+			errstr:   "has() requires exactly 1 argument, got 2",
+		},
+		{
+			caseName: "contains method with arg",
+			method:   "contains",
+			args:     []string{"value"},
+			wantType: "*tree.ContainsQuery",
+		},
+		{
+			caseName: "contains method no args",
+			method:   "contains",
+			args:     []string{},
+			errstr:   "contains() requires exactly 1 argument, got 0",
+		},
+		{
+			caseName: "contains method too many args",
+			method:   "contains",
+			args:     []string{"value1", "value2"},
+			errstr:   "contains() requires exactly 1 argument, got 2",
+		},
+		{
+			caseName: "first method",
+			method:   "first",
+			args:     []string{},
+			wantType: "*tree.FirstQuery",
+		},
+		{
+			caseName: "last method",
+			method:   "last",
+			args:     []string{},
+			wantType: "*tree.LastQuery",
+		},
+		{
+			caseName: "flatten method",
+			method:   "flatten",
+			args:     []string{},
+			wantType: "*tree.FlattenQuery",
+		},
+		{
+			caseName: "unknown method",
+			method:   "unknown",
+			args:     []string{},
+			errstr:   "unknown method: unknown",
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.caseName, func(t *testing.T) {
+			got, err := NewMethodQuery(tc.method, tc.args...)
+			if tc.errstr != "" {
+				if err == nil {
+					t.Fatalf("expected error %q, got nil", tc.errstr)
+				}
+				if err.Error() != tc.errstr {
+					t.Errorf("got error %q; want %q", err.Error(), tc.errstr)
+				}
+				return
+			}
+			if err != nil {
+				t.Fatal(err)
+			}
+			if got == nil {
+				t.Fatal("got nil query")
+			}
+			
+			gotType := reflect.TypeOf(got).String()
+			if gotType != tc.wantType {
+				t.Errorf("got type %s; want %s", gotType, tc.wantType)
+			}
+		})
+	}
+}
+
+func Test_RegisterNewMethodQueryFunc(t *testing.T) {
+	// Save original state
+	methodQueryMux.Lock()
+	original := make(map[string]NewMethodQueryFunc)
+	for k, v := range newMethodQueryFuncs {
+		original[k] = v
+	}
+	methodQueryMux.Unlock()
+	
+	// Restore original state after test
+	defer func() {
+		methodQueryMux.Lock()
+		newMethodQueryFuncs = original
+		methodQueryMux.Unlock()
+	}()
+	
+	// Test registration
+	testFunc := func(args ...string) (Query, error) {
+		return &CountQuery{}, nil
+	}
+	
+	RegisterNewMethodQueryFunc("test", testFunc)
+	
+	// Test that it was registered
+	query, err := NewMethodQuery("test")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, ok := query.(*CountQuery); !ok {
+		t.Errorf("expected CountQuery, got %T", query)
+	}
+	
+	// Test overwriting existing registration
+	testFunc2 := func(args ...string) (Query, error) {
+		return &KeysQuery{}, nil
+	}
+	
+	RegisterNewMethodQueryFunc("test", testFunc2)
+	
+	query2, err := NewMethodQuery("test")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, ok := query2.(*KeysQuery); !ok {
+		t.Errorf("expected KeysQuery, got %T", query2)
 	}
 }

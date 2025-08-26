@@ -10,7 +10,7 @@ var (
 	// newMethodQueryFuncs stores registered method query factory functions
 	newMethodQueryFuncs = make(map[string]NewMethodQueryFunc)
 	// methodQueryMux protects concurrent access to newMethodQueryFuncs
-	methodQueryMux      sync.Mutex
+	methodQueryMux sync.Mutex
 )
 
 // NewMethodQueryFunc is a factory function type for creating method queries.
@@ -236,6 +236,65 @@ func (q *HasQuery) String() string {
 	return fmt.Sprintf("has(%q)", q.Key)
 }
 
+// ContainsQuery checks if the node contains the specified value.
+// Works with arrays, maps, and string values.
+type ContainsQuery struct {
+	Value string
+}
+
+// NewContainsQuery creates a new ContainsQuery instance.
+// Requires exactly one argument specifying the value to check.
+func NewContainsQuery(args ...string) (Query, error) {
+	if len(args) != 1 {
+		return nil, fmt.Errorf("contains() requires exactly 1 argument, got %d", len(args))
+	}
+	return &ContainsQuery{Value: args[0]}, nil
+}
+
+// Exec returns whether the node contains the specified value.
+// For arrays, checks if any element equals the value. For maps, checks if any value equals the value.
+// For strings, checks if the string contains the substring.
+func (q *ContainsQuery) Exec(n Node) ([]Node, error) {
+	switch n.Type() {
+	case TypeArray:
+		for _, item := range n.Array() {
+			if item.Value().String() == q.Value {
+				return ToNodeValues(true), nil
+			}
+		}
+		return ToNodeValues(false), nil
+	case TypeMap:
+		for _, value := range n.Map() {
+			if value.Value().String() == q.Value {
+				return ToNodeValues(true), nil
+			}
+		}
+		return ToNodeValues(false), nil
+	case TypeStringValue:
+		return ToNodeValues(stringContains(n.Value().String(), q.Value)), nil
+	}
+	return ToNodeValues(false), nil
+}
+
+func (q *ContainsQuery) String() string {
+	return fmt.Sprintf("contains(%q)", q.Value)
+}
+
+func stringContains(s, substr string) bool {
+	if len(substr) == 0 {
+		return true
+	}
+	if len(s) < len(substr) {
+		return false
+	}
+	for i := 0; i <= len(s)-len(substr); i++ {
+		if s[i:i+len(substr)] == substr {
+			return true
+		}
+	}
+	return false
+}
+
 // FirstQuery returns the first element of an array.
 // Returns null for empty arrays or non-array types.
 type FirstQuery struct{}
@@ -325,6 +384,7 @@ func init() {
 	RegisterNewMethodQueryFunc("empty", NewEmptyQuery)
 	RegisterNewMethodQueryFunc("type", NewTypeQuery)
 	RegisterNewMethodQueryFunc("has", NewHasQuery)
+	RegisterNewMethodQueryFunc("contains", NewContainsQuery)
 	RegisterNewMethodQueryFunc("first", NewFirstQuery)
 	RegisterNewMethodQueryFunc("last", NewLastQuery)
 	RegisterNewMethodQueryFunc("flatten", NewFlattenQuery)

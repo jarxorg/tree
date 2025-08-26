@@ -193,16 +193,6 @@ func Test_MethodQuery(t *testing.T) {
 			q:        &LastQuery{},
 			n:        Array{},
 			want:     []Node{Nil},
-		}, {
-			caseName: "flatten nested arrays",
-			q:        &FlattenQuery{},
-			n:        Array{ToArrayValues(1, 2), ToArrayValues(3, 4), NumberValue(5)},
-			want:     []Node{ToArrayValues(1, 2, 3, 4, 5)},
-		}, {
-			caseName: "flatten non-array",
-			q:        &FlattenQuery{},
-			n:        StringValue("test"),
-			want:     []Node{StringValue("test")},
 		},
 	}
 	for _, tc := range testCases {
@@ -314,12 +304,6 @@ func Test_NewMethodQuery(t *testing.T) {
 			wantType: "*tree.LastQuery",
 		},
 		{
-			caseName: "flatten method",
-			method:   "flatten",
-			args:     []string{},
-			wantType: "*tree.FlattenQuery",
-		},
-		{
 			caseName: "unknown method",
 			method:   "unknown",
 			args:     []string{},
@@ -345,7 +329,7 @@ func Test_NewMethodQuery(t *testing.T) {
 			if got == nil {
 				t.Fatal("got nil query")
 			}
-			
+
 			gotType := reflect.TypeOf(got).String()
 			if gotType != tc.wantType {
 				t.Errorf("got type %s; want %s", gotType, tc.wantType)
@@ -362,21 +346,21 @@ func Test_RegisterNewMethodQueryFunc(t *testing.T) {
 		original[k] = v
 	}
 	methodQueryMux.Unlock()
-	
+
 	// Restore original state after test
 	defer func() {
 		methodQueryMux.Lock()
 		newMethodQueryFuncs = original
 		methodQueryMux.Unlock()
 	}()
-	
+
 	// Test registration
 	testFunc := func(args ...string) (Query, error) {
 		return &CountQuery{}, nil
 	}
-	
+
 	RegisterNewMethodQueryFunc("test", testFunc)
-	
+
 	// Test that it was registered
 	query, err := NewMethodQuery("test")
 	if err != nil {
@@ -385,14 +369,14 @@ func Test_RegisterNewMethodQueryFunc(t *testing.T) {
 	if _, ok := query.(*CountQuery); !ok {
 		t.Errorf("expected CountQuery, got %T", query)
 	}
-	
+
 	// Test overwriting existing registration
 	testFunc2 := func(args ...string) (Query, error) {
 		return &KeysQuery{}, nil
 	}
-	
+
 	RegisterNewMethodQueryFunc("test", testFunc2)
-	
+
 	query2, err := NewMethodQuery("test")
 	if err != nil {
 		t.Fatal(err)

@@ -345,37 +345,6 @@ func (q *LastQuery) String() string {
 	return "last()"
 }
 
-// FlattenQuery flattens nested arrays into a single array.
-// Only flattens one level deep by default.
-type FlattenQuery struct{}
-
-// NewFlattenQuery creates a new FlattenQuery instance.
-// Arguments are ignored for this query type.
-func NewFlattenQuery(args ...string) (Query, error) {
-	return &FlattenQuery{}, nil
-}
-
-// Exec flattens nested arrays into a single array.
-// Only flattens one level deep. Returns the original node for non-arrays.
-func (q *FlattenQuery) Exec(n Node) ([]Node, error) {
-	if a := n.Array(); a != nil {
-		var flattened Array
-		for _, item := range a {
-			if subArray := item.Array(); subArray != nil {
-				flattened = append(flattened, subArray...)
-			} else {
-				flattened = append(flattened, item)
-			}
-		}
-		return []Node{flattened}, nil
-	}
-	return []Node{n}, nil
-}
-
-func (q *FlattenQuery) String() string {
-	return "flatten()"
-}
-
 // init automatically registers the built-in method queries.
 func init() {
 	RegisterNewMethodQueryFunc("count", NewCountQuery)
@@ -387,5 +356,4 @@ func init() {
 	RegisterNewMethodQueryFunc("contains", NewContainsQuery)
 	RegisterNewMethodQueryFunc("first", NewFirstQuery)
 	RegisterNewMethodQueryFunc("last", NewLastQuery)
-	RegisterNewMethodQueryFunc("flatten", NewFlattenQuery)
 }
